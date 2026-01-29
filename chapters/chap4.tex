@@ -1,0 +1,462 @@
+\chapter{System Design}
+\label{chap:design}
+
+\section{Overview of the System Architecture}
+
+\subsection{Architectural Goals}
+The primary goals of the system architecture are to achieve low-latency, high-throughput real-time messaging at scale, ensure reliability and security, and support extensibility for future features. The architecture is designed to be horizontally scalable, resilient to failures, and maintainable for rapid development cycles.
+
+\subsection{High-Level Architecture Diagram}
+\begin{figure}[H]
+    \centering
+    % Replace with your actual architecture diagram
+    \includegraphics[width=0.95\textwidth]{images/system.png}
+    \caption{High-level system architecture for scalable real-time messaging.}
+    \label{fig:highlevel-arch}
+\end{figure}
+
+\noindent
+The provided High-Level Architecture Diagram illustrates a robust, scalable, and distributed Real-time Communication (RTC) System. The infrastructure is designed to handle high concurrency and large volumes of data through a decoupled microservices-based approach.
+
+\textbf{1. Real-time Connectivity and Session Management}\\
+The system utilizes WebSockets (WS) to facilitate low-latency, bi-directional communication between clients and the backend. A Load Balancer serves as the entry point, distributing incoming traffic across multiple instances of Chat Servers (e.g., Server A and Server B) to ensure high availability. To manage state in a distributed environment, a User Connection Cache (typically implemented using an in-memory store like Redis) tracks active sessions and maps specific users to their respective host servers, enabling efficient message routing.
+
+\textbf{2. Message Persistence and Asynchronous Processing}\\
+To decouple real-time delivery from long-term storage, the architecture incorporates an asynchronous pipeline: Message Queue acts as a buffer to ingest high-frequency message streams, ensuring system reliability during peak traffic and preventing the storage layer from becoming a bottleneck. The Message Storage Service consumes data from the queue and manages the persistence logic. The Message DB is a distributed database cluster (likely employing database sharding) designed to store vast quantities of historical chat data while maintaining performant read/write operations. A Group Service manages group metadata and memberships, backed by its own specialized database.
+
+\textbf{3. Media Handling and Content Delivery}\\
+The architecture separates signaling (messages) from heavy media assets. Media Service and Blob Store handle file uploads (e.g., images, videos), storing them in a Blob Store (such as AWS S3 or Google Cloud Storage). A Content Delivery Network (CDN) caches and serves media assets from edge locations closer to end-users, minimizing latency and reducing load on origin servers.
+
+\textbf{4. Push Notifications}\\
+A Notification Service is integrated to handle asynchronous alerts, ensuring users remain engaged by delivering push notifications for incoming messages when they are offline or when the application is in the background.
+
+\textbf{Key Architectural Strengths:} Scalability is achieved through horizontal scaling at every layer. Resilience is ensured by using message queues and distributed caching to prevent single points of failure. Performance is optimized by offloading media to a CDN and using WebSockets for signaling, resulting in a responsive user experience.
+
+% Would you like me to expand on any specific component, such as the sharding strategy for the Message DB or the security protocols (e.g., TLS/WSS) for the connection layer?
+
+\subsection{Data Flow Overview}
+
+The system processes user actions (e.g., sending messages, joining channels) through a series of layers: the WebSocket gateway receives client events, which are validated and routed to backend services. Messages are persisted, broadcast via a pub-sub broker, and delivered to all relevant clients. Control plane operations (e.g., channel management) use REST APIs.
+
+\subsection{Main Sequence Diagrams}
+
+To clarify the main flows in the system, the following sequence diagrams illustrate the interactions for key scenarios. (You may use PlantUML or external tools to generate the images.)
+
+\paragraph{a) Send Message Flow}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/openai-sequence.png}
+    \caption{Sequence diagram: User sends a message}
+    \label{fig:seq-send-message}
+\end{figure}
+\lipsum[15-16]
+
+\paragraph{b) WebSocket Authentication Flow}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/jwks-validation-flow.png}
+    \caption{Sequence diagram: WebSocket authentication}
+    \label{fig:seq-ws-auth}
+\end{figure}
+\lipsum[17]
+
+\paragraph{c) Presence Update Flow}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/function_calling_diagram.png}
+    \caption{Sequence diagram: Presence update}
+    \label{fig:seq-presence-update}
+\end{figure} 
+\lipsum[18]
+
+\subsection{Key Architectural Decisions (KADs)}
+\begin{itemize}
+    \item \textbf{Event-driven, non-blocking Node.js backend} for high concurrency.
+    \item \textbf{WebSocket protocol} for real-time, bidirectional communication.
+    \item \textbf{Horizontal scaling} via stateless services and distributed brokers.
+    \item \textbf{Separation of real-time and control plane} for performance and security.
+    \item \textbf{Centralized authentication and RBAC} for secure access control.
+    \item \textbf{Observability and metrics} built-in for operational excellence.
+\end{itemize}
+
+\section{System Components and Responsibilities}
+
+The system is decomposed into modular components, each with clear responsibilities:
+
+\subsection{WebSocket Gateway Layer}
+Handles client WebSocket connections, authentication, session management, and initial event routing. Ensures secure, persistent, and low-latency connections.
+
+\lipsum[1]
+
+\subsection{Real-Time Message Service}
+Processes inbound and outbound messages, applies business logic (e.g., filtering, validation), and interacts with the pub-sub broker for message fan-out.
+
+\lipsum[2]
+
+\subsection{Channel and Membership Service}
+Manages channels, memberships, roles, and permissions. Provides APIs for channel creation, joining, and membership updates.
+
+\lipsum[3]
+
+\subsection{Persistence Layer (Database + Storage)}
+Stores user, channel, membership, and message data. Ensures durability, consistency, and efficient querying. May use a combination of relational and NoSQL databases, plus object storage for attachments.
+
+\lipsum[4]
+
+\subsection{Message Broker / Pub-Sub Layer}
+Distributes messages to all relevant nodes and services. Enables horizontal scaling and decouples message producers from consumers. Typically implemented with Redis, NATS, or Kafka.
+
+\lipsum[5]
+
+\subsection{Authentication \& Authorization Service}
+Manages user authentication (e.g., JWT), token issuance, validation, and role-based access control (RBAC) enforcement.
+
+\lipsum[6]
+
+\subsection{Admin \& Observability Layer}
+Provides dashboards, metrics, logs, and alerting for operators and administrators. Supports monitoring, troubleshooting, and auditing.
+
+\lipsum[7]
+
+\section{Detailed Backend Architecture}
+
+\subsection{Node.js Service Architecture (Event-Driven Model)}
+The backend leverages Node.js's event-driven, non-blocking I/O model to handle thousands of concurrent connections efficiently. Each service is stateless and communicates via APIs or message queues.
+
+\lipsum[8]
+
+\subsection{Horizontal Scaling Strategy (Clustering, Multi-node)}
+Multiple Node.js instances are deployed across nodes. Clustering and container orchestration (e.g., Kubernetes) enable dynamic scaling. Shared state is minimized; distributed caches and brokers synchronize transient data.
+
+\lipsum[9]
+
+\subsection{Load Balancing and Traffic Routing}
+Traffic is distributed using a reverse proxy (e.g., Nginx, HAProxy) with support for sticky sessions (if session affinity is needed) or stateless routing. Load balancers monitor node health and route traffic accordingly.
+
+\lipsum[10]
+
+\subsubsection{Sticky Sessions vs Stateless Routing}
+Sticky sessions bind a client to a specific gateway for session persistence, while stateless routing allows any gateway to serve any client. Stateless routing is preferred for scalability, but sticky sessions may be used for certain features.
+
+\lipsum[11]
+
+\subsubsection{Reverse Proxy Setup (Nginx/HAProxy)}
+Reverse proxies terminate TLS, balance traffic, and provide DDoS protection. Configuration includes health checks, rate limiting, and WebSocket upgrade support.
+
+\lipsum[12]
+
+\subsection{Connection Lifecycle Management}
+\begin{itemize}
+    \item \textbf{WebSocket handshake:} Secure upgrade from HTTP(S) to WebSocket, with authentication.
+    \item \textbf{Reconnection logic:} Clients auto-reconnect with exponential backoff after disconnects.
+    \item \textbf{Heartbeat/Keep-alive:} Periodic ping/pong frames detect dead connections and maintain session state.
+\end{itemize}
+
+\section{Data Design}
+
+\subsection{Database Model Overview}
+The data model is designed for efficient storage and retrieval of messages, users, channels, and memberships. Normalization is balanced with denormalization for performance.
+
+\subsection{Database Analysis and Design}
+
+\subsubsection{Database Technology Selection}
+The system requires a database solution that supports high write throughput, low-latency reads, horizontal scalability, and strong consistency for core messaging data. After evaluating several options, the following choices were made:
+\begin{itemize}
+    \item \textbf{Message Store:} A distributed NoSQL database (e.g., MongoDB, Cassandra, or Amazon DynamoDB) is selected for storing chat messages due to its ability to handle large volumes of semi-structured data, automatic sharding, and high availability. These databases support horizontal scaling and flexible schema evolution, which are essential for real-time messaging workloads.
+    \item \textbf{User, Channel, and Membership Data:} A relational database (e.g., PostgreSQL or MySQL) is used for structured data with strong consistency requirements, such as user profiles, channel metadata, and membership relations. This enables complex queries, referential integrity, and transactional updates.
+    \item \textbf{Caching and Pub/Sub:} Redis is employed for caching hot data (presence, recent messages) and for implementing the pub-sub pattern to distribute real-time events across nodes.
+    \item \textbf{Media Storage:} Large files (images, videos) are stored in a cloud object storage service (e.g., AWS S3), decoupled from the main database to optimize performance and cost.
+\end{itemize}
+
+\subsubsection{Design Rationale}
+\begin{itemize}
+    \item \textbf{NoSQL for Messages:} Message data is append-only, high-volume, and does not require complex joins, making NoSQL a natural fit. Sharding by channel or tenant enables linear scaling.
+    \item \textbf{Relational for Metadata:} User and channel data benefit from ACID transactions and relational integrity, supporting features like permissions, roles, and analytics.
+    \item \textbf{Hybrid Approach:} Combining NoSQL and SQL leverages the strengths of both paradigms, ensuring performance and data integrity where needed.
+    \item \textbf{Redis for Real-Time:} Redis provides sub-millisecond latency for presence and pub-sub, critical for real-time UX.
+\end{itemize}
+
+\subsubsection{Schema Design and Key Structures}
+The following table summarizes the main entities, their storage technology, and key fields:
+\begin{table}[H]
+    \centering
+    \caption{Core Data Entities and Storage Technologies}
+    \label{tab:entity-storage}
+    \small
+    \renewcommand{\arraystretch}{1.1}
+    \begin{tabularx}{\textwidth}{
+        p{2.5cm}
+        p{3.2cm}
+        p{3.2cm}
+        X
+    }
+        \toprule
+        \textbf{Entity} & \textbf{Storage} & \textbf{Partition Key} & \textbf{Key Fields} \\
+        \midrule
+        User & PostgreSQL & user\_id &
+        username, email, password\_hash, profile, roles, status \\
+
+        Channel & PostgreSQL & channel\_id &
+        name, type, settings, created\_at \\
+
+        Membership & PostgreSQL & (user\_id, channel\_id) &
+        role, join\_time, permissions \\
+
+        Message & MongoDB / DynamoDB & channel\_id &
+        message\_id, sender\_id, content, timestamps, attachments, reactions \\
+
+        Delivery / Read State & MongoDB / DynamoDB & message\_id &
+        user\_id, delivered, read\_at \\
+
+        Presence & Redis & user\_id &
+        online\_status, last\_seen \\
+
+        Media & Amazon S3 & file\_id &
+        url, owner, type, size, uploaded\_at \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsubsection{Sharding and Partitioning Strategy}
+To ensure scalability, the message store is sharded by channel\_id (or tenant in multi-tenant deployments). This distributes write and read load evenly and allows for independent scaling of hot channels. User and channel tables in the relational database are indexed on primary keys and frequently queried fields. Redis keys are namespaced by user or channel for efficient lookup.
+
+\subsubsection{Replication and High Availability}
+All databases are deployed in multi-AZ (Availability Zone) configurations. NoSQL clusters use replica sets or multi-region replication for durability. SQL databases employ streaming replication and automated failover. Redis is configured with sentinel or cluster mode for resilience.
+
+\subsubsection{Data Consistency and Integrity}
+\begin{itemize}
+    \item \textbf{Messages:} Eventual consistency is acceptable for message delivery, but strong consistency is enforced for message creation and deletion.
+    \item \textbf{User/Channel:} Strong consistency is required for authentication, permissions, and membership changes.
+    \item \textbf{Media:} Metadata is stored in the database, while the actual file is stored in object storage with signed URLs for secure access.
+\end{itemize}
+
+
+\subsubsection{Comparison of Database Alternatives}
+The following table compares candidate database technologies for the message store:
+\begin{table}[H]
+    \centering
+    \caption{Comparison of NoSQL Databases for Message Storage}
+    \label{tab:nosql-comparison}
+    \begin{tabularx}{\textwidth}{l X X X X}
+        \toprule
+        \textbf{Database} & \textbf{Scalability} & \textbf{Consistency} & \textbf{Operational Complexity} & \textbf{Best Use Case} \\
+        \midrule
+        MongoDB & Horizontal (sharding), flexible schema & Tunable (eventual/strong) & Moderate (requires ops expertise) & General-purpose, flexible queries \\
+        Cassandra & Linear, multi-region & Eventual & High (complex ops, tuning) & High write throughput, global scale \\
+        DynamoDB & Fully managed, auto-sharding & Tunable (eventual/strong) & Low (managed service) & Serverless, predictable workloads \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsubsection{Summary of Database Design Decisions}
+The hybrid approach leverages the strengths of each technology: NoSQL for scalable message storage, SQL for structured metadata, Redis for real-time features, and object storage for media. This design ensures the system can meet demanding requirements for scalability, reliability, and user experience in a real-time messaging context.
+
+\subsection{Entity--Relationship Diagram (ERD)}
+\begin{figure}[H]
+    \centering
+    % Replace with your ERD diagram
+    \includegraphics[width=0.8\textwidth]{images/erd.png}
+    \caption{Entity--Relationship Diagram for core data entities.}
+    \label{fig:design-erd}
+\end{figure}
+
+\subsection{Key Entities and Schemas}
+\begin{itemize}
+    \item \textbf{User:} user\_id, profile, credentials, presence, roles
+    \item \textbf{Channel:} channel\_id, name, type, settings
+    \item \textbf{Membership:} user\_id, channel\_id, role, join\_time
+    \item \textbf{Message:} message\_id, sender, channel, content, timestamps, delivery/read state
+    \item \textbf{Delivery/Read State:} message\_id, user\_id, delivered, read\_at
+\end{itemize}
+
+\subsection{Data Partitioning \& Indexing Strategy}
+Data is partitioned by tenant or channel for scalability. Indexes are created on frequently queried fields (e.g., channel\_id, user\_id, timestamps) to optimize performance.
+
+\lipsum[14]
+
+\subsection{Caching Strategy (Redis)}
+Redis is used for caching hot data (e.g., presence, recent messages) and for pub-sub event distribution. TTLs and eviction policies are tuned for workload patterns.
+
+\lipsum[15]
+
+\section{API \& Protocol Design}
+
+This section describes the design of the APIs and communication protocols that enable real-time messaging, control operations, and integration with external systems. The API and protocol design is based on recommendations from \cite{cantelon2017nodejs,brown2019websockets,rauch2022scalable,blogkafka2022} to ensure robust and flexible client-server interactions.
+
+\subsection{WebSocket Protocol Design}
+
+The WebSocket protocol is central to delivering low-latency, bidirectional communication between clients and the backend. The following conventions and structures are adopted to standardize event handling and error reporting.
+\begin{itemize}
+    \item \textbf{Event Naming Convention:} Consistent, namespaced event names (e.g., msg.send, presence.update).
+    \item \textbf{Message Frame Structure:} JSON objects with type, payload, and metadata fields.
+    \item \textbf{Error Frame Structure:} Standardized error codes and messages for client handling.
+\end{itemize}
+
+\subsection{WebSocket Event Flows}
+
+The system defines clear event flows for all real-time interactions, ensuring reliable message delivery, presence updates, and user experience features. Key flows are outlined below.
+\begin{itemize}
+    \item \textbf{Sending a Message:} Client emits msg.send; server validates, persists, and broadcasts.
+    \item \textbf{Receiving/Broadcasting:} Server emits msg.deliver to all channel members.
+    \item \textbf{Presence Updates:} Client emits presence.update; server fans out to subscribers.
+    \item \textbf{Typing Indicators:} Client emits typing; server throttles and broadcasts to channel.
+\end{itemize}
+
+
+\subsection{REST API Endpoints (Control Plane)}
+REST APIs support channel management, user administration, and metrics. Endpoints follow RESTful conventions and use JWT for authentication.
+
+\begin{table}[h]
+\centering
+\caption{Representative REST endpoints}
+\label{tab:rest-api}
+\begin{tabular}{l l p{7cm}}
+\toprule
+\textbf{Method \& Path} & \textbf{Auth} & \textbf{Purpose} \\
+\midrule
+\texttt{POST /v1/auth/token} & Public & Exchange credentials for access tokens. \\
+\texttt{GET /v1/channels/:id} & User & Retrieve channel metadata and membership. \\
+\texttt{POST /v1/channels} & Admin & Create a channel with settings and ACLs. \\
+\texttt{GET /v1/messages?channel=:id\&page=:n} & User & Paginate message history. \\
+\texttt{GET /v1/metrics} & Admin & Export operational metrics. \\
+\texttt{PATCH /v1/messages/:id} & User & Edit a message (if permitted). \\
+\texttt{DELETE /v1/messages/:id} & User & Delete a message (if permitted). \\
+\texttt{POST /v1/files} & User & Upload a file attachment. \\
+\texttt{GET /v1/audit-logs} & Admin & Retrieve audit logs for compliance. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Authentication Workflow (JWT, Token Refresh, Validation)}
+Clients authenticate via REST, receive JWTs, and use them for WebSocket upgrades. Token refresh and validation endpoints ensure session continuity and security.
+
+\lipsum[17]
+
+\section{User Interface Design}
+
+\subsection{UI Wireframes (Chat Window, Channel List)}
+\begin{figure}[H]
+    \centering
+    % Replace with your UI wireframe
+    \includegraphics[width=0.8\textwidth]{images/ui-wireframe.jpg}
+    \caption{Sample UI wireframe for chat window and channel list.}
+    \label{fig:ui-wireframe}
+\end{figure}
+
+\subsection{User Interaction Flow}
+Users log in, join channels, send/receive messages, and manage settings. The UI provides intuitive navigation and real-time feedback.
+
+\lipsum[18]
+
+\subsection{Real-Time UX Elements}
+
+To enhance the user experience, the interface incorporates several real-time feedback elements. These features provide immediate visual cues about system and user activity, improving usability and engagement.
+\begin{itemize}
+    \item Typing animation for active users
+    \item Message delivery ticks (sent, delivered, read)
+    \item Presence badges (online, away, offline)
+\end{itemize}
+
+
+\section{Security Design}
+
+\subsection{Threat Model}
+The system is designed to mitigate threats such as unauthorized access, data leakage, denial of service, and message tampering. Threat modeling is performed regularly to identify new risks and update countermeasures.
+
+\subsection{Transport Security (TLS, WSS)}
+All client-server and inter-service communication is encrypted using TLS. WebSocket connections use WSS to prevent eavesdropping and tampering. Certificates are managed and rotated regularly. Internal service-to-service traffic is also protected by TLS to prevent lateral movement and sniffing.
+
+\subsection{Authentication and Authorization}
+\textbf{Authentication:} All REST and WebSocket requests require a valid JWT (JSON Web Token), signed with a strong secret or asymmetric key, and with a short expiration time. Tokens are issued by a centralized authentication service after verifying user credentials. Token refresh endpoints are provided, and blacklisting is enforced on logout or compromise.
+
+\textbf{Authorization:} Role-Based Access Control (RBAC) is enforced at both API and event levels. Each user is assigned roles (e.g., user, admin, guest), and permissions are checked for every sensitive operation. JWTs include claims for user roles and scopes, and are validated on every request.
+
+\subsection{Input Validation and Sanitization}
+All user input is strictly validated and sanitized to prevent injection attacks (SQL/NoSQL injection, XSS) and data corruption. File uploads are checked for type, size, and scanned for malware. Output encoding and Content Security Policy (CSP) headers are used to mitigate XSS.
+
+\subsection{Mitigation of Common Attacks}
+\begin{itemize}
+    \item \textbf{DDoS/Brute-force:} Distributed rate limiting is enforced per user and per IP using Redis or similar, with automatic blocking of abusive patterns.
+    \item \textbf{Replay Attacks:} Nonces, timestamps, and token expiration are used to prevent replaying of authentication or message events.
+    \item \textbf{CSRF/XSS:} Authentication is not cookie-based; all tokens are sent in headers. Output is always escaped, and CSP headers are set.
+    \item \textbf{Session Hijacking:} JWTs include audience, issuer, and scope claims; optional IP or user-agent binding can be enforced for sensitive actions.
+    \item \textbf{WebSocket-specific:} Idle timeouts, connection caps per user/IP, and message quotas are enforced. Abuse detection algorithms monitor for flooding or protocol misuse.
+\end{itemize}
+
+\subsection{Logging and Audit Trails}
+All security-relevant events (login, failed attempts, permission denials, configuration changes) are logged with correlation IDs. Audit logs are tamper-evident, stored securely, and accessible only to authorized administrators.
+
+\subsection{Sensitive Data Encryption}
+User passwords are hashed using bcrypt or argon2 with a unique salt per user. Sensitive data in the database (such as access tokens or personal information) is encrypted at rest using strong encryption algorithms. Secrets and keys are managed in a secure vault.
+
+\subsection{Security Best Practices}
+\begin{itemize}
+    \item Regular vulnerability scanning and penetration testing.
+    \item Automated dependency checks for known vulnerabilities.
+    \item Principle of least privilege for all services and users.
+    \item Regular review and rotation of secrets and credentials.
+    \item Security incident response plan in place.
+\end{itemize}
+
+\section{Performance \& Scalability Design}
+
+\subsection{Performance Targets (Latency, Throughput)}
+The system targets $<$150ms P95 message delivery latency and $\geq$10,000 messages/sec throughput per region.
+
+\lipsum[24]
+
+\subsection{Scaling WebSocket Gateways}
+Gateways are stateless and horizontally scalable. Autoscaling policies respond to connection and CPU load.
+
+\lipsum[25]
+
+\subsection{Message Fan-out Optimization}
+Batching, efficient pub-sub, and selective delivery minimize fan-out latency and resource usage.
+
+\lipsum[26]
+
+\subsection{Distributed Rate Limiting}
+Rate limits are enforced using distributed counters (e.g., Redis) to prevent abuse across all nodes.
+
+\lipsum[27]
+
+\subsection{Backpressure Handling}
+The system detects slow consumers and applies backpressure, dropping or buffering messages as needed to maintain stability.
+
+\lipsum[28]
+
+\subsection{Load Testing Scenarios (Design-level)}
+Load tests simulate peak usage, network partitions, and failover to validate design assumptions and performance targets.
+
+\lipsum[29]
+
+\section{High Availability \& Fault Tolerance}
+
+\subsection{Failover Strategy}
+Redundant nodes and services are deployed in each region. Health checks and automated failover minimize downtime.
+
+\lipsum[30]
+
+\subsection{Auto-Reconnect Protocol}
+Clients implement exponential backoff and session resumption to recover from transient failures.
+
+\lipsum[31]
+
+\subsection{Multi-Zone Deployment Architecture}
+Services are deployed across multiple availability zones for resilience to data center failures.
+
+\lipsum[32]
+
+\subsection{Data Replication \& Redundancy}
+Critical data is replicated across zones and backed up regularly. Consensus protocols (e.g., Raft) may be used for consistency.
+
+\lipsum[33]
+
+\subsection{Recovery from Node Failure}
+Automated orchestration replaces failed nodes and restores service. Monitoring and alerting ensure rapid response.
+
+\lipsum[34]
+
+\section{Summary of the System Design}
+
+This chapter has detailed the architecture, components, data model, protocols, and security of the real-time messaging system. Key design choices were made to meet the requirements outlined in Chapter~\ref{chap:requirements}, with a focus on scalability, reliability, and security. Limitations and future alternatives are noted throughout, providing a foundation for ongoing improvement and adaptation.

@@ -1,0 +1,149 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\@writefile{toc}{\contentsline {chapter}{\numberline {4}System Design}{25}{chapter.4}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\@writefile{lopytx}{\addvspace {10\p@ }}
+\newlabel{chap:design}{{4}{25}{System Design}{chapter.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.1}Overview of the System Architecture}{25}{section.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1.1}Architectural Goals}{25}{subsection.4.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1.2}High-Level Architecture Diagram}{25}{subsection.4.1.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.1}{\ignorespaces High-level system architecture for scalable real-time messaging.}}{25}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:highlevel-arch}{{4.1}{25}{High-level system architecture for scalable real-time messaging}{figure.caption.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1.3}Data Flow Overview}{27}{subsection.4.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1.4}Main Sequence Diagrams}{27}{subsection.4.1.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.2}{\ignorespaces Sequence diagram: User sends a message}}{27}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:seq-send-message}{{4.2}{27}{Sequence diagram: User sends a message}{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {paragraph}{a) Send Message Flow}{27}{figure.caption.17}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.3}{\ignorespaces Sequence diagram: WebSocket authentication}}{28}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:seq-ws-auth}{{4.3}{28}{Sequence diagram: WebSocket authentication}{figure.caption.19}{}}
+\@writefile{toc}{\contentsline {paragraph}{b) WebSocket Authentication Flow}{28}{figure.caption.19}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.4}{\ignorespaces Sequence diagram: Presence update}}{29}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:seq-presence-update}{{4.4}{29}{Sequence diagram: Presence update}{figure.caption.21}{}}
+\@writefile{toc}{\contentsline {paragraph}{c) Presence Update Flow}{29}{figure.caption.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1.5}Key Architectural Decisions (KADs)}{29}{subsection.4.1.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.2}System Components and Responsibilities}{30}{section.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.1}WebSocket Gateway Layer}{30}{subsection.4.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.2}Real-Time Message Service}{30}{subsection.4.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.3}Channel and Membership Service}{30}{subsection.4.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.4}Persistence Layer (Database + Storage)}{31}{subsection.4.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.5}Message Broker / Pub-Sub Layer}{31}{subsection.4.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.6}Authentication \& Authorization Service}{31}{subsection.4.2.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2.7}Admin \& Observability Layer}{32}{subsection.4.2.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.3}Detailed Backend Architecture}{32}{section.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3.1}Node.js Service Architecture (Event-Driven Model)}{32}{subsection.4.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3.2}Horizontal Scaling Strategy (Clustering, Multi-node)}{32}{subsection.4.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3.3}Load Balancing and Traffic Routing}{33}{subsection.4.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Sticky Sessions vs Stateless Routing}{33}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Reverse Proxy Setup (Nginx/HAProxy)}{33}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3.4}Connection Lifecycle Management}{34}{subsection.4.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.4}Data Design}{34}{section.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.1}Database Model Overview}{34}{subsection.4.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.2}Database Analysis and Design}{34}{subsection.4.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Database Technology Selection}{34}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Design Rationale}{35}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Schema Design and Key Structures}{35}{section*.26}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4.1}{\ignorespaces Core Data Entities and Storage Technologies}}{35}{table.caption.27}\protected@file@percent }
+\newlabel{tab:entity-storage}{{4.1}{35}{Core Data Entities and Storage Technologies}{table.caption.27}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Sharding and Partitioning Strategy}{35}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Replication and High Availability}{36}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Data Consistency and Integrity}{36}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Comparison of Database Alternatives}{36}{section*.31}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4.2}{\ignorespaces Comparison of NoSQL Databases for Message Storage}}{36}{table.caption.32}\protected@file@percent }
+\newlabel{tab:nosql-comparison}{{4.2}{36}{Comparison of NoSQL Databases for Message Storage}{table.caption.32}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Summary of Database Design Decisions}{36}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.3}Entity--Relationship Diagram (ERD)}{37}{subsection.4.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.5}{\ignorespaces Entity--Relationship Diagram for core data entities.}}{37}{figure.caption.34}\protected@file@percent }
+\newlabel{fig:design-erd}{{4.5}{37}{Entity--Relationship Diagram for core data entities}{figure.caption.34}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.4}Key Entities and Schemas}{37}{subsection.4.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.5}Data Partitioning \& Indexing Strategy}{37}{subsection.4.4.5}\protected@file@percent }
+\citation{cantelon2017nodejs,brown2019websockets,rauch2022scalable,blogkafka2022}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.6}Caching Strategy (Redis)}{38}{subsection.4.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.5}API \& Protocol Design}{38}{section.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5.1}WebSocket Protocol Design}{38}{subsection.4.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5.2}WebSocket Event Flows}{39}{subsection.4.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5.3}REST API Endpoints (Control Plane)}{39}{subsection.4.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4.3}{\ignorespaces Representative REST endpoints}}{39}{table.caption.35}\protected@file@percent }
+\newlabel{tab:rest-api}{{4.3}{39}{Representative REST endpoints}{table.caption.35}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5.4}Authentication Workflow (JWT, Token Refresh, Validation)}{39}{subsection.4.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.6}User Interface Design}{40}{section.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6.1}UI Wireframes (Chat Window, Channel List)}{40}{subsection.4.6.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.6}{\ignorespaces Sample UI wireframe for chat window and channel list.}}{40}{figure.caption.36}\protected@file@percent }
+\newlabel{fig:ui-wireframe}{{4.6}{40}{Sample UI wireframe for chat window and channel list}{figure.caption.36}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6.2}User Interaction Flow}{40}{subsection.4.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6.3}Real-Time UX Elements}{40}{subsection.4.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.7}Security Design}{41}{section.4.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.1}Threat Model}{41}{subsection.4.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.2}Transport Security (TLS, WSS)}{41}{subsection.4.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.3}Authentication and Authorization}{41}{subsection.4.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.4}Input Validation and Sanitization}{41}{subsection.4.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.5}Mitigation of Common Attacks}{42}{subsection.4.7.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.6}Logging and Audit Trails}{42}{subsection.4.7.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.7}Sensitive Data Encryption}{42}{subsection.4.7.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7.8}Security Best Practices}{42}{subsection.4.7.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.8}Performance \& Scalability Design}{43}{section.4.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8.1}Performance Targets (Latency, Throughput)}{43}{subsection.4.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8.2}Scaling WebSocket Gateways}{43}{subsection.4.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8.3}Message Fan-out Optimization}{43}{subsection.4.8.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8.4}Distributed Rate Limiting}{44}{subsection.4.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8.5}Backpressure Handling}{44}{subsection.4.8.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8.6}Load Testing Scenarios (Design-level)}{44}{subsection.4.8.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.9}High Availability \& Fault Tolerance}{45}{section.4.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.1}Failover Strategy}{45}{subsection.4.9.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.2}Auto-Reconnect Protocol}{45}{subsection.4.9.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.3}Multi-Zone Deployment Architecture}{45}{subsection.4.9.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.4}Data Replication \& Redundancy}{46}{subsection.4.9.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.5}Recovery from Node Failure}{46}{subsection.4.9.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.10}Summary of the System Design}{46}{section.4.10}\protected@file@percent }
+\@setckpt{chapters/chap4}{
+\setcounter{page}{47}
+\setcounter{equation}{0}
+\setcounter{enumi}{5}
+\setcounter{enumii}{0}
+\setcounter{enumiii}{0}
+\setcounter{enumiv}{0}
+\setcounter{footnote}{0}
+\setcounter{mpfootnote}{0}
+\setcounter{part}{0}
+\setcounter{chapter}{4}
+\setcounter{section}{10}
+\setcounter{subsection}{0}
+\setcounter{subsubsection}{0}
+\setcounter{paragraph}{0}
+\setcounter{subparagraph}{0}
+\setcounter{figure}{6}
+\setcounter{table}{3}
+\setcounter{FancyVerbLine}{0}
+\setcounter{PlantUmlFigureNumberSVG}{0}
+\setcounter{PlantUmlFigureNumber}{0}
+\setcounter{linenumber}{1}
+\setcounter{LN@truepage}{60}
+\setcounter{FancyVerbWriteLine}{0}
+\setcounter{FancyVerbBufferLine}{0}
+\setcounter{FV@TrueTabGroupLevel}{0}
+\setcounter{FV@TrueTabCounter}{0}
+\setcounter{FV@HighlightLinesStart}{0}
+\setcounter{FV@HighlightLinesStop}{0}
+\setcounter{FancyVerbLineBreakLast}{0}
+\setcounter{FV@BreakBufferDepth}{0}
+\setcounter{currfiledepth}{0}
+\setcounter{pytx@FancyVerbLineTemp}{0}
+\setcounter{pytx@py@default@default}{0}
+\setcounter{pytx@pycon@default@default}{0}
+\setcounter{pytx@sympy@default@default}{0}
+\setcounter{pytx@sympycon@default@default}{0}
+\setcounter{pytx@pylab@default@default}{0}
+\setcounter{pytx@pylabcon@default@default}{0}
+\setcounter{pytx@bash@default@default}{0}
+\setcounter{float@type}{16}
+\setcounter{caption@flags}{2}
+\setcounter{continuedfloat}{0}
+\setcounter{parentequation}{0}
+\setcounter{section@level}{1}
+\setcounter{Item}{5}
+\setcounter{Hfootnote}{0}
+\setcounter{bookmark@seq@number}{113}
+\setcounter{lstnumber}{1}
+\setcounter{listing}{0}
+\setcounter{lstlisting}{0}
+}

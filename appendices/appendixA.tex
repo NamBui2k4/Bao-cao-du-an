@@ -1,0 +1,515 @@
+% =========================
+% Appendix A (Supplementary Materials)
+% Save as: appendices/appendixA.tex
+% =========================
+
+\chapter{Supplementary Materials}
+\label{app:supplement}
+
+% -------- Optional local tweaks for listings --------
+% Define JSON and YAML lexers for the 'listings' package (not built-in by default).
+\lstdefinelanguage{json}{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny,
+  stepnumber=1,
+  numbersep=6pt,
+  showstringspaces=false,
+  breaklines=true,
+  literate=
+   *{0}{{{\color{blue}0}}}{1}
+    {1}{{{\color{blue}1}}}{1}
+    {2}{{{\color{blue}2}}}{1}
+    {3}{{{\color{blue}3}}}{1}
+    {4}{{{\color{blue}4}}}{1}
+    {5}{{{\color{blue}5}}}{1}
+    {6}{{{\color{blue}6}}}{1}
+    {7}{{{\color{blue}7}}}{1}
+    {8}{{{\color{blue}8}}}{1}
+    {9}{{{\color{blue}9}}}{1}
+    {:}{{{\color{black}{:}}}}{1}
+    {,}{{{\color{black}{,}}}}{1}
+    {"}{{{\color{red}"}}}{1}
+    {{true}}{{{\color{teal}true}}}{4}
+    {{false}}{{{\color{teal}false}}}{5}
+    {{null}}{{{\color{teal}null}}}{4}
+}
+\lstdefinelanguage{yaml}{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny,
+  stepnumber=1,
+  numbersep=6pt,
+  showstringspaces=false,
+  breaklines=true,
+  morecomment=[l]{\#},
+  morestring=[b]',
+  morestring=[b]"
+}
+
+% Keep captions small and italic per your guideline (already set in preamble).
+
+\section{Environment Configuration Files}
+This section provides example configuration files and environment templates used for local development and deployment. It helps ensure reproducibility and security by avoiding the exposure of sensitive information.
+\label{app:env}
+% Purpose: Provide safe, reproducible environment templates without exposing secrets.
+
+\subsection*{A.1.1 \texttt{.env.example} (do not commit real secrets)}
+This subsection contains a sample .env file, illustrating the required environment variables for running the system locally. Actual secrets should never be committed or shared.
+\begin{lstlisting}[language=yaml, caption={Sample .env.example for local development (no secrets)}]
+# Server
+PORT=8080
+NODE_ENV=development
+LOG_LEVEL=info
+
+# WebSocket Gateway
+WS_MAX_PAYLOAD=1048576
+WS_HEARTBEAT_INTERVAL_MS=18000
+
+# Redis (Pub/Sub + cache)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# Database
+DB_ENGINE=postgres
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=app_user
+DB_NAME=messaging
+
+# Auth (JWT)
+JWT_ISSUER=example.com
+JWT_AUDIENCE=messaging-clients
+JWT_PUBLIC_KEY_PATH=./keys/jwt.pub
+
+# Metrics
+PROMETHEUS_PORT=9090
+\end{lstlisting}
+
+\subsection*{A.1.2 Gateway Configuration (YAML)}
+Here, a YAML configuration for the WebSocket gateway is provided, showing key parameters for connection limits, timeouts, and rate limiting.
+\begin{lstlisting}[language=yaml, caption={WebSocket gateway configuration (sample)}]
+gateway:
+  idleTimeoutMs: 30000
+  maxConcurrentConns: 80000
+  maxFrameSize: 262144
+  allowOrigins:
+    - https://app.example.com
+    - https://staging.example.com
+rateLimit:
+  msgsPerSecond: 30
+  burst: 60
+  perIpConnLimit: 5
+\end{lstlisting}
+
+% Notes:
+% - Keep generic values. Real production configs should be documented privately.
+% - Avoid hard-coding secrets; prefer SSM/Secrets Manager (see Ch. 6).
+
+% ---------------------------------------------------
+
+\section{Detailed API Specifications (REST \& WebSocket)}
+This section documents the main API endpoints and WebSocket event schemas, supporting integration and client development.
+\label{app:apispec}
+
+\subsection*{A.2.1 WebSocket Events (Schemas)}
+This part describes the structure of WebSocket events exchanged between clients and the server, including message, presence, and typing events.
+% Provide JSON examples for request/response frames to complement Ch. 4.
+\begin{lstlisting}[language={}, caption={Client -> Server: msg.send}]
+{
+  "event": "msg.send",
+  "data": {
+    "channel_id": "c-82f5",
+    "content": "Hello, team!",
+    "client_ts": 1737112234
+  },
+  "trace_id": "8e4b0a7b-1c6a-4c5c-9f0e-1b2c3d4e5f6a"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language={}, caption={Server -> Client: msg.deliver}]
+{
+  "event": "msg.deliver",
+  "data": {
+    "message_id": "m-9ad12",
+    "channel_id": "c-82f5",
+    "server_ts": 1737112235,
+    "sender_id": "u-42bd",
+    "content": "Hello, team!"
+  },
+  "trace_id": "8e4b0a7b-1c6a-4c5c-9f0e-1b2c3d4e5f6a"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language={}, caption={Presence and typing events (bidirectional)}]
+{
+  "event": "presence.update",
+  "data": { "user_id": "u-42bd", "state": "online", "last_seen": 1737112237 }
+}
+\end{lstlisting}
+
+\subsection*{A.2.2 REST Endpoints (Details)}
+Here, you will find sample REST API responses for authentication and message retrieval, useful for backend and frontend integration.
+\begin{lstlisting}[language={}, caption={POST /v1/auth/token (response)}]
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "scope": "realtime:connect channels:read messages:write"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language={}, caption={GET /v1/messages?channel=:id\&page=:n (response)}]
+{
+  "page": 3,
+  "page_size": 50,
+  "items": [
+    { "message_id": "m-9ad12", "sender_id": "u-42bd", "content": "Hello", "ts": 1737112201 },
+    { "message_id": "m-9ad13", "sender_id": "u-51fa", "content": "Hi!",   "ts": 1737112203 }
+  ],
+  "next_page": 4
+}
+\end{lstlisting}
+
+\subsection*{A.2.3 Error Model and Rate Limits}
+This subsection explains the error response format and rate limiting strategies applied to API endpoints and WebSocket events.
+\begin{lstlisting}[language={}, caption={Error envelope (all endpoints/events)}]
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Too many requests",
+    "request_id": "r-1f9d22",
+    "hint": "Reduce frequency or back off and retry later."
+  }
+}
+\end{lstlisting}
+
+% ---------------------------------------------------
+
+\section{Additional Diagrams}
+This section includes full-size diagrams such as the entity relationship diagram, sequence diagrams, and deployment architecture to aid understanding of system structure and workflows.
+\label{app:diagrams}
+% Provide large-size versions to preserve readability when printed.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{appendices/erd-full.png} % <-- replace with actual file
+  \caption{Full-size Entity Relationship Diagram (ERD).}
+  \label{fig:erd-full}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{appendices/seq-message-delivery.png} % <-- replace with actual file
+  \caption{Sequence diagram for message delivery pipeline.}
+  \label{fig:seq-delivery}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{appendices/aws-deployment-detailed.png} % <-- replace
+  \caption{AWS deployment architecture (detailed view).}
+  \label{fig:aws-detailed}
+\end{figure}
+
+% ---------------------------------------------------
+
+\section{Selected Code Snippets}
+Here, you will find practical code examples for key system components, including WebSocket handlers, Redis pub/sub integration, and Nginx proxy configuration.
+\label{app:code}
+
+\subsection*{A.4.1 WebSocket Message Handler (Node.js)}
+This snippet demonstrates how the WebSocket server processes incoming messages and delivers them to channel members.
+\begin{lstlisting}[language={}, caption={WebSocket message handler (simplified)}]
+ws.on('message', async (raw) => {
+  try {
+    const frame = JSON.parse(raw);
+    if (frame.event === 'msg.send') {
+      const saved = await messageService.persist(frame.data);
+      await pubsub.publish(saved.channel_id, {
+        event: 'msg.deliver',
+        data: saved
+      });
+    }
+  } catch (err) {
+    logger.warn({ err }, 'invalid frame');
+    ws.send(JSON.stringify({
+      error: { code: 'BAD_REQUEST', message: 'Invalid JSON frame' }
+    }));
+  }
+});
+\end{lstlisting}
+
+\subsection*{A.4.2 Redis Pub/Sub Integration}
+This example shows how Redis is used for pub/sub messaging, enabling efficient fan-out to multiple clients.
+\begin{lstlisting}[language={}, caption={Redis Pub/Sub fan-out (sketch)}]
+const sub = redis.duplicate();
+await sub.connect();
+await sub.subscribe(`chan:${channelId}`, (msg) => {
+  const payload = JSON.parse(msg);
+  fanoutService.broadcastToChannel(channelId, payload); // non-blocking
+});
+\end{lstlisting}
+
+\subsection*{A.4.3 Nginx Reverse Proxy for WebSocket}
+This configuration illustrates how Nginx is set up to proxy WebSocket connections securely and reliably.
+\begin{lstlisting}[language=yaml, caption={Nginx config snippet for WebSocket proxying}]
+server {
+  listen 443 ssl http2;
+  server_name ws.example.com;
+
+  location / {
+    proxy_pass http://gateway_pool;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_http_version 1.1;
+    proxy_read_timeout 60s;
+  }
+}
+\end{lstlisting}
+
+% ---------------------------------------------------
+
+\section{Load Testing Scripts}
+This section provides scripts and configuration files for load testing the messaging system, validating performance and scalability under stress.
+\label{app:load}
+% Include k6 and Artillery examples used to validate NFRs (Ch. 3).
+
+\subsection*{A.5.1 k6 Script (WebSocket Burst)}
+This script uses k6 to simulate a burst of WebSocket connections and message traffic, testing system limits.
+\begin{lstlisting}[language={}, caption={k6 WebSocket burst test (example)}]
+import ws from 'k6/ws';
+import { check, sleep } from 'k6';
+
+export const options = {
+  scenarios: {
+    burst: {
+      executor: 'constant-vus',
+      vus: 500,
+      duration: '60s',
+    }
+  }
+};
+
+export default function () {
+  const url = 'wss://ws.example.com';
+  const params = { headers: { Authorization: `Bearer ${__ENV.TOKEN}` } };
+  const res = ws.connect(url, params, function (socket) {
+    socket.on('open', () => {
+      for (let i = 0; i < 20; i++) {
+        socket.send(JSON.stringify({ event: 'msg.send', data: { channel_id: 'c-1', content: `hello ${i}` }}));
+      }
+    });
+    socket.on('message', (msg) => { /* validate */ });
+    socket.setTimeout(function () { socket.close(); }, 5000);
+  });
+  check(res, { 'status is 101': (r) => r && r.status === 101 });
+  sleep(1);
+}
+\end{lstlisting}
+
+\subsection*{A.5.2 Artillery (Channel Fan-out)}
+This Artillery configuration is designed to test channel fan-out performance by broadcasting messages to many recipients.
+\begin{lstlisting}[language=yaml, caption={Artillery config for fan-out test (excerpt)}]
+config:
+  target: "wss://ws.example.com"
+  phases:
+    - duration: 120
+      arrivalRate: 200
+  engines:
+    ws: {}
+scenarios:
+  - engine: "ws"
+    flow:
+      - send:
+          event: "msg.send"
+          data:
+            channel_id: "c-1"
+            content: "broadcast"
+      - think: 1
+\end{lstlisting}
+
+% ---------------------------------------------------
+
+\section{Evaluation Data Tables}
+This section contains tables summarizing latency, throughput, and resource usage metrics collected during system evaluation.
+\label{app:data}
+% Raw or summarized numbers to support Ch. 6 graphs (avoid clutter in main text).
+
+\begin{table}[h]
+\centering
+\caption{Latency distribution under load (single region, 3 nodes)}
+\label{tab:latency2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Scenario} & \textbf{p50 (ms)} & \textbf{p95 (ms)} & \textbf{p99 (ms)} & \textbf{Error \%} \\
+\midrule
+1k conns, 2k msg/s & 38 & 112 & 197 & 0.05 \\
+10k conns, 8k msg/s & 45 & 138 & 265 & 0.12 \\
+30k conns, 15k msg/s & 59 & 171 & 311 & 0.25 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Throughput vs number of gateway nodes}
+\label{tab:throughput2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Nodes} & \textbf{Msgs/s (avg)} & \textbf{CPU per node (\%)} & \textbf{Redis CPU (\%)} \\
+\midrule
+1 & 2{,}900 & 78 & 31 \\
+3 & 8{,}700 & 72 & 44 \\
+6 & 17{,}200 & 68 & 59 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------
+
+\section{Deployment Scripts (Excerpts)}
+Here, you will find excerpts from deployment scripts, including Dockerfiles, docker-compose setups, and Terraform snippets for cloud infrastructure.
+\label{app:deploy}
+
+\subsection*{A.7.1 Dockerfile (Gateway)}
+This Dockerfile shows how the Node.js gateway service is built and configured for production deployment.
+\begin{lstlisting}[language=yaml, caption={Dockerfile (Node.js gateway, simplified)}]
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+ENV NODE_ENV=production
+EXPOSE 8080
+CMD ["node", "dist/main.js"]
+\end{lstlisting}
+
+\subsection*{A.7.2 docker-compose.yml (Local Dev)}
+This docker-compose file provides a local development environment with all required services, including Redis and PostgreSQL.
+\begin{lstlisting}[language=yaml, caption={docker-compose (local development)}]
+version: "3.9"
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: messaging
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_pass
+    ports: ["5432:5432"]
+  gateway:
+    build: .
+    environment:
+      - REDIS_HOST=redis
+      - DB_HOST=db
+    ports: ["8080:8080"]
+    depends_on: [redis, db]
+\end{lstlisting}
+
+\subsection*{A.7.3 Terraform Snippet (ALB Listener for WSS)}
+This Terraform snippet demonstrates how to configure an AWS Application Load Balancer listener for secure WebSocket traffic.
+\begin{lstlisting}[language=yaml, caption={Terraform (HCL) snippet for ALB listener (pseudo)}]
+resource "aws_lb_listener" "wss" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  certificate_arn   = var.acm_cert_arn
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.gateway.arn
+  }
+}
+\end{lstlisting}
+
+% ---------------------------------------------------
+
+\section{Experiment Reproducibility Checklist}
+This section lists the software versions and step-by-step instructions needed to reproduce the experiments and benchmarks described in the thesis.
+\label{app:repro}
+
+\subsection*{A.8.1 Software Versions}
+This table details the exact software versions used in all experiments to ensure reproducibility and consistency.
+\begin{table}[h]
+\centering
+\caption{Versions used in experiments}
+\label{tab:versions}
+\begin{tabular}{l l}
+\toprule
+\textbf{Component} & \textbf{Version} \\
+\midrule
+Node.js & 20.x LTS \\
+Redis & 7.x \\
+PostgreSQL & 16.x \\
+k6 & 0.50+ \\
+Artillery & 2.x \\
+Nginx & 1.25+ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{A.8.2 Steps to Reproduce (Summary)}
+This summary outlines the main steps required to set up the infrastructure, deploy the system, and run performance tests.
+\begin{enumerate}
+  \item Provision infrastructure (VPC, ALB, compute, ElastiCache, DB).
+  \item Deploy gateway container(s) and set environment variables (no secrets in images).
+  \item Seed database and create test channels/users.
+  \item Run k6/Artillery scenarios from a separate load injector VPC/subnet.
+  \item Collect metrics (CloudWatch, Prometheus, logs) and export CSV for analysis.
+\end{enumerate}
+
+% ---------------------------------------------------
+
+\section{Additional Logs and Error Samples}
+This section provides sample logs and error codes to help with troubleshooting and understanding system behavior during failures.
+\label{app:logs}
+
+\subsection*{A.9.1 Structured Log (Masked)}
+This log example shows the format and key fields of structured logs generated by the gateway service.
+\begin{lstlisting}[language={}, caption={Gateway structured log (JSON)}]
+{
+  "ts":"2026-01-17T14:20:01.120Z",
+  "level":"info",
+  "msg":"delivered",
+  "channel":"c-82f5",
+  "message_id":"m-9ad12",
+  "latency_ms":42,
+  "conn_id":"k3r2",
+  "trace_id":"8e4b0a7b-1c6a-4c5c-9f0e-1b2c3d4e5f6a"
+}
+\end{lstlisting}
+
+\subsection*{A.9.2 WebSocket Close Codes (Excerpt)}
+This table lists common WebSocket close codes and their meanings, useful for diagnosing connection issues.
+\begin{table}[h]
+\centering
+\caption{Common WebSocket close codes (excerpt)}
+\label{tab:ws-codes}
+\begin{tabular}{l l p{8cm}}
+\toprule
+\textbf{Code} & \textbf{Name} & \textbf{Meaning} \\
+\midrule
+1000 & Normal Closure & Regular closure without error \\
+1006 & Abnormal Closure & No close frame; network break or peer lost \\
+1008 & Policy Violation & Server closed due to policy (e.g., ACL) \\
+1011 & Internal Error & Unexpected server condition \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------
+
+\section{Glossary of Technical Terms}
+This glossary defines important technical terms used throughout the appendix and thesis, supporting reader understanding.
+\label{app:glossary}
+% Keep concise, alphabetically if possible.
+\begin{itemize}
+  \item \textbf{Backpressure:} Mechanisms to prevent producers from overwhelming consumers by applying flow control.
+  \item \textbf{Fan-out:} Broadcasting a message to multiple recipients (e.g., all members of a channel).
+  \item \textbf{Presence:} Representation of a user's online/offline/away state and last-seen timestamp.
+  \item \textbf{Sharding:} Partitioning data or load across multiple nodes to scale horizontally.
+  \item \textbf{Sticky Session:} Routing a client to the same backend node across requests or connections.
+  \item \textbf{Trace ID:} Unique identifier propagated across services for distributed tracing.
+\end{itemize}
+
+% ================= End Appendix A =================

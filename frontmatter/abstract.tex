@@ -1,0 +1,29 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+
+Real-time communication has become a fundamental requirement in modern digital systems, 
+ranging from customer support platforms and collaborative workspaces to large-scale 
+social applications. This thesis presents the design, implementation, and evaluation 
+of a \textbf{scalable real-time messaging system} built using \textbf{Node.js} and 
+the \textbf{WebSocket} protocol. The system aims to provide low-latency, highly available, 
+and horizontally scalable bidirectional communication suitable for applications with 
+significant concurrency demands.
+
+The proposed architecture adopts an event-driven programming model, supported by a 
+Redis-based publish–subscribe layer to distribute messages efficiently across multiple 
+WebSocket gateway nodes. A carefully designed data model and persistence layer ensure 
+message integrity, delivery tracking, and efficient retrieval of message history. 
+To achieve cloud-native scalability, the system is deployed on the Amazon Web Services (AWS) 
+platform, incorporating load balancing, autoscaling, containerized services, and 
+centralized observability.
+
+Comprehensive performance testing, including high-concurrency connection tests, message 
+fan-out benchmarking, and fault recovery experiments, demonstrates that the system meets 
+its primary non-functional requirements. The results show consistent low-latency message 
+delivery, stable throughput under increasing load, and predictable scaling behavior across 
+multiple nodes.
+
+Overall, this work contributes a practical and extensible system design for real-time 
+messaging in distributed environments, together with empirical insights that may guide 
+future developments in large-scale communication platforms.
