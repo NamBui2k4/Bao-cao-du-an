@@ -1,22 +1,29 @@
-
 \usepackage{tabularx}
 \usepackage{plantuml}
 \usepackage{lipsum}  % For dummy text
 \usepackage{float}
 % ----- Encoding & Font -----
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage{polyglossia}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
 
 % --- Colors (bắt buộc trước listings) ---
 \usepackage[dvipsnames,table]{xcolor}
 % dvipsnames: thêm nhiều tên màu có sẵn; 'table' để màu trong bảng booktabs nếu cần.
 
 % ----- Vietnamese? -----
-% Nếu bạn cần tiếng Việt, thêm:
-\usepackage[vietnamese, english]{babel}
+\setmainlanguage{vietnamese}
+\setotherlanguage{english}
+
 
 % ----- Margin -----
-\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage[
+  a4paper,
+  top=3.5cm,
+  bottom=3cm,
+  left=3.5cm,
+  right=2cm
+]{geometry}
 
 % ----- Line spacing ~1.5 -----
 \usepackage{setspace}
@@ -24,7 +31,7 @@
 
 % ----- Graphics -----
 \usepackage{graphicx}  % Chèn hình
-\graphicspath{{../images/}}
+\graphicspath{{images/}}
 
 
 % ----- Caption formatting -----
@@ -45,7 +52,7 @@
 % ----- Code -----
 \usepackage{listings}
 \lstset{
-  basicstyle=\ttfamily\small,
+  basicstyle=\ttfamily\normalsize,
   frame=none,
   breaklines=true,
   breakatwhitespace=true,
