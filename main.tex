@@ -29,7 +29,10 @@
 \pagenumbering{arabic}
 
 
-% -------------------Chapters---------------------------
+% =======================
+% Chapters (NỘI DUNG)
+% =======================
+
 \include{chapters/chap1}
 \include{chapters/chap2}
 \include{chapters/chap3}
@@ -38,9 +41,16 @@
 \include{chapters/chap6}
 \include{chapters/chap7}
 
-% % -------------------Bibliography-----------------------
+% =======================
+% Bibliography (CUỐI)
+% =======================
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Bibliography}
+
+\nocite{*} % <<< BẮT BUỘC
 \bibliographystyle{ieeetr}
 \bibliography{references}
+
 
 % % -------------------Appendices-------------------------
 \appendix
