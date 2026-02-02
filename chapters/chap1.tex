@@ -3,31 +3,60 @@
 \section{Background and Rationale}
 
 In recent years,  the rapid growth of technology and the push for digital 
-transformation in education have made the development of 
-robust Learning Management Systems (LMS) more urgent than ever. 
-The architecture behind such systems is not merely a technical choice; 
-it directly shapes their scalability, maintainability, and long-term. 
-Approaches such as Monolithic, Modular Monolith, and Microservices have emerged as 
-dominant paradigms, each offering unique strengths and trade-offs.
-This essay will explore and contrast these three architectural models in 
-the context of building an LMS, focusing on functional modules such as 
-user authentication, course management, content delivery, assessment, and progress tracking.
+transformation in education have made the development of robust 
+Learning Management Systems (LMS) more urgent than ever. The architecture 
+behind such systems is not merely a technical choice; it directly shapes 
+their scalability, maintainability, and long-term. Approaches such as 
+Monolithic, Modular Monolith, and Microservices have emerged as dominant 
+paradigms, each offering unique strengths and trade-offs.This essay will 
+explore and contrast these three architectural models in the context of 
+building an LMS, focusing on functional modules such as user authentication, 
+course management, content delivery, assessment, and progress tracking.
 % \cite{nguyen_van_dinh_2023}.
 
 \section{Project Objectives}
 
-The objectives of this project are:
+In general , the objectives of this project is building and 
+deploying a Learning Management System (LMS) in form of three 
+different software architectures.
+
+For specific, the following targets will be expected:
 \begin{enumerate}
-    \item Design an LMS system with core functions (CRUD, authentication / authorization, enrollment, 
+    \item Design an LMS system with core functions (CRUD, 
+    authentication / authorization, enrollment, 
     learning content, assignment \& grade, learning process,..)
+
     \item Deploy the LMS system according to three different architectures
     \item Develop scenarios for system change and expansion
     \item Compare architectures based on specific technical criteria
-    \item Analyze the advantages and disadvantages of each architecture in actual implementation
+    \item Analyze the advantages and disadvantages of each 
+    architecture in actual implementation
+
 \end{enumerate}
 
 \section{Scope of the Project}
 
+The scope of the project focuses on researching, designing and comparing three 
+software architectures when applied to the same business problem. The LMS system 
+is only used as a research object to illustrate and verify the above architectures, 
+not the main development goal of the project. In other words, the focus of the 
+topic is software architecture analysis, while LMS construction only serves as 
+a means for deployment and evaluation.
+
+Across all three architectures, the system is consistently decomposed into core 
+functional modules (e.g., authentication/authorization, enrollment, learning 
+content, assignments and grading, progress tracking). Extended features such as 
+learning analytics or recommendation algorithms are acknowledged but reserved 
+for future work.
+
+The project does not prioritize detailed user interface or user experience (UI/UX) 
+design, employing only minimal interfaces sufficient for testing and demonstration. 
+Regarding technology choices, the team adopts contemporary frameworks considered 
+most suitable at present, namely NestJS and Vue.js due to their widespread adoption, 
+strong community support, and suitability for modular.
+
+Other architectures (e.g., serverless, large-scale event-driven architecture, 
+or complex hybrid architectures) are outside the scope of the study.
 
 
 \section{Research Methodology}
