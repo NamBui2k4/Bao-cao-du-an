@@ -1,21 +1,34 @@
 \chapter{Introduction}
 
 \section{Background and Rationale}
-The demand for scalable real-time messaging systems has grown rapidly with the proliferation of collaborative applications, social platforms, and IoT devices \cite{guth2018comparison,tilkov2018nodejs}. Node.js, with its event-driven architecture, has become a popular choice for building such systems due to its ability to handle high concurrency and low-latency communication \cite{cantelon2017nodejs,nodejsdocs}. WebSocket technology further enables persistent, bidirectional communication channels, which are essential for instant message delivery and interactive user experiences \cite{brown2019websockets,baker2017websocket}. Recent advances in cloud infrastructure and managed services, such as AWS, have made it feasible to deploy and scale these systems globally \cite{awsdocs,roberts2020aws}.
+
+In recent years,  the rapid growth of technology and the push for digital 
+transformation in education have made the development of 
+robust Learning Management Systems (LMS) more urgent than ever. 
+The architecture behind such systems is not merely a technical choice; 
+it directly shapes their scalability, maintainability, and long-term. 
+Approaches such as Monolithic, Modular Monolith, and Microservices have emerged as 
+dominant paradigms, each offering unique strengths and trade-offs.
+This essay will explore and contrast these three architectural models in 
+the context of building an LMS, focusing on functional modules such as 
+user authentication, course management, content delivery, assessment, and progress tracking.
+% \cite{nguyen_van_dinh_2023}.
 
 \section{Project Objectives}
-\lipsum[3]\\[3pt]
+
 The objectives of this project are:
 \begin{enumerate}
-    \item To design a scalable real-time messaging system using Node.js and WebSocket.
-    \item To implement efficient message handling and delivery mechanisms.
-    \item To evaluate the performance and scalability of the system under various load conditions.
-    \item To document the design and implementation process for future reference.
-    \item To explore potential applications and extensions of the messaging system.
+    \item Design an LMS system with core functions (CRUD, authentication / authorization, enrollment, 
+    learning content, assignment \& grade, learning process,..)
+    \item Deploy the LMS system according to three different architectures
+    \item Develop scenarios for system change and expansion
+    \item Compare architectures based on specific technical criteria
+    \item Analyze the advantages and disadvantages of each architecture in actual implementation
 \end{enumerate}
 
 \section{Scope of the Project}
-\lipsum[4-5]
+
+
 
 \section{Research Methodology}
 \lipsum[6-7]
