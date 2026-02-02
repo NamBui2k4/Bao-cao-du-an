@@ -22,17 +22,12 @@ Reallocating 'name_of_file' (item size: 1) to 25 items.
 A level-1 auxiliary file: appendices/appendixA.aux
 Database file #1: references.bib
 Warning--I didn't find a database entry for "guth2018comparison"
-Warning--I didn't find a database entry for "tilkov2018nodejs"
-Warning--I didn't find a database entry for "cantelon2017nodejs"
-Warning--I didn't find a database entry for "nodejsdocs"
-Warning--I didn't find a database entry for "brown2019websockets"
-Warning--I didn't find a database entry for "baker2017websocket"
-Warning--I didn't find a database entry for "awsdocs"
-Warning--I didn't find a database entry for "roberts2020aws"
 Warning--I didn't find a database entry for "kleppmann2013designing"
 Warning--I didn't find a database entry for "wang2018scalable"
 Warning--I didn't find a database entry for "li2020realtime"
 Warning--I didn't find a database entry for "smith2020cloud"
+Warning--I didn't find a database entry for "tilkov2018nodejs"
+Warning--I didn't find a database entry for "brown2019websockets"
 Warning--I didn't find a database entry for "rauch2022scalable"
 Warning--I didn't find a database entry for "martin2021websocket"
 Warning--I didn't find a database entry for "blogmicro2023"
@@ -41,38 +36,43 @@ Warning--I didn't find a database entry for "redisdocs"
 Warning--I didn't find a database entry for "blogkafka2022"
 Warning--I didn't find a database entry for "gonzalez2022websocket"
 Warning--I didn't find a database entry for "kim2023iot"
+Warning--I didn't find a database entry for "baker2017websocket"
 Warning--I didn't find a database entry for "zhang2021aws"
 Warning--I didn't find a database entry for "fowler2015microservices"
-You've used 1 entry,
+Warning--I didn't find a database entry for "cantelon2017nodejs"
+Warning--I didn't find a database entry for "awsdocs"
+Warning--I didn't find a database entry for "roberts2020aws"
+Warning--I didn't find a database entry for "nodejsdocs"
+You've used 2 entries,
             1876 wiz_defined-function locations,
-            513 strings with 4487 characters,
-and the built_in function-call counts, 164 in all, are:
-= -- 14
-> -- 4
+            519 strings with 4396 characters,
+and the built_in function-call counts, 296 in all, are:
+= -- 27
+> -- 8
 < -- 0
-+ -- 2
-- -- 1
-* -- 9
-:= -- 35
-add.period$ -- 2
-call.type$ -- 1
-change.case$ -- 1
++ -- 4
+- -- 2
+* -- 13
+:= -- 54
+add.period$ -- 4
+call.type$ -- 2
+change.case$ -- 2
 chr.to.int$ -- 0
-cite$ -- 1
-duplicate$ -- 9
-empty$ -- 18
-format.name$ -- 1
-if$ -- 35
+cite$ -- 2
+duplicate$ -- 13
+empty$ -- 36
+format.name$ -- 2
+if$ -- 69
 int.to.chr$ -- 0
-int.to.str$ -- 1
+int.to.str$ -- 2
 missing$ -- 1
-newline$ -- 7
-num.names$ -- 1
-pop$ -- 3
+newline$ -- 11
+num.names$ -- 2
+pop$ -- 10
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 1
+skip$ -- 4
 stack$ -- 0
 substring$ -- 0
 swap$ -- 1
@@ -81,7 +81,7 @@ text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
 warning$ -- 0
-while$ -- 1
-width$ -- 2
-write$ -- 12
+while$ -- 2
+width$ -- 3
+write$ -- 21
 (There were 22 warnings)
