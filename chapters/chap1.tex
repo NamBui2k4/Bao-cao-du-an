@@ -8,7 +8,7 @@ Learning Management Systems (LMS) more urgent than ever. The architecture
 behind such systems is not merely a technical choice; it directly shapes 
 their scalability, maintainability, and long-term. Approaches such as 
 Monolithic, Modular Monolith, and Microservices have emerged as dominant 
-paradigms, each offering unique strengths and trade-offs.This essay will 
+paradigms, each offering unique strengths and trade-offs. This project will 
 explore and contrast these three architectural models in the context of 
 building an LMS, focusing on functional modules such as user authentication, 
 course management, content delivery, assessment, and progress tracking.
@@ -43,11 +43,11 @@ not the main development goal of the project. In other words, the focus of the
 topic is software architecture analysis, while LMS construction only serves as 
 a means for deployment and evaluation.
 
-Across all three architectures, the system is consistently decomposed into core 
-functional modules (e.g., authentication/authorization, enrollment, learning 
-content, assignments and grading, progress tracking). Extended features such as 
-learning analytics or recommendation algorithms are acknowledged but reserved 
-for future work.
+Across all three architectures, the system remains core functional modules stable
+(e.g., authentication and authorization, enrollment, learning 
+content, assignments and grading, progress tracking) even existing changes
+in architecture. Extended features such as learning analytics or recommendation 
+algorithms are acknowledged but reserved for future work.
 
 The project does not prioritize detailed user interface or user experience (UI/UX) 
 design, employing only minimal interfaces sufficient for testing and demonstration. 
@@ -60,12 +60,72 @@ or complex hybrid architectures) are outside the scope of the study.
 
 
 \section{Research Methodology}
-\lipsum[6-7]
+
+With a comparative research orientation, this project focuses on an empirical 
+architectural study rather than a pure software development process.
 
 \subsection{Theorical Methodology}
-\lipsum[8-9]
+The first phase includes refering and reviewing design principle theories
+to clarify the basic characteristics of the elearning system and building
+techniques. Those theories are collected from reputable academic papers and
+professional blogs \cite{nguyen_van_dinh_2023,Alex_xu_2025}. This phases also
+need to figure out the advantages and limitations of the three architectures.
+During refering, our team proposes some search keywords including: 
+“monolithic, modular monolith, and microservices”, "elearning systems design",
+"Low \& High coupling".
+
+The theories analysis process is carried out using a thematic synthesis 
+approach, focusing on extracting core principles such as coupling, cohesion, 
+deployment unit, inter-component communication, and scalability. From there, 
+the study identifies five main comparison criteria: 
+\begin{itemize}
+    \item Degree of module separation, 
+    \item Scope of impact when modifying functionality, 
+    \item Scalability of individual functional components, 
+    \item Complexity of deployment and operation, 
+    \item Suitability for different system scales: small, medium, large.
+\end{itemize}
+
+The result of the theoretical phase is a comparison framework 
+that serves as the foundation for the experimental part, ensuring 
+that the assessment is not subjective but based on recognized 
+principles and evidence.
+
 \subsection{Practical Methodology}
-\lipsum[9-10]
+
+The experimental phase is the focus of the research. At the begining,
+team will outline some ideas and functional requirement into 
+Software Requirement Specs (SRS) in order to be convenient for designing.
+In SRS, the system is decomposed into consistent business subsystems 
+including: Identity \& Access Management, User Profile, Course Management, 
+Enrollment Management, Learning Content, Assessment \& Grading, Progress 
+Tracking, along with future expansion subsystems (Learning Analytics and AI). 
+Maintaining the same business decomposition across all three architectures 
+ensures fairness and objectivity: differences only come from the choice of 
+architectural structure, not from functional variation.
+
+The LMS system is implemented three times, each corresponding to one of 
+the selected architectural styles. All of them, we use the 
+same technology stack (NestJS, Vuejs, PostgreSQL) to control extraneous 
+variables, and are containerized with Docker to measure deployments fairly.
+
+A scenario-based evaluation approach is applied to all implementations 
+using predefined change scenarios, including:
+\begin{itemize}
+    \item Modifying the learning scoring logic
+    \item Adding a learning progress statistics feature
+    \item Preparing for future integration of learning analytics functionality
+\end{itemize}
+
+The evaluation is performed using scenario-based evaluation, a common 
+approach in software architecture research to simulate real-life changes. 
+Three change scenarios are applied to all three versions in turn:
+\begin{itemize}
+    \item Modifying the learning scoring logic.
+    \item Adding a learning progress statistics feature (adding a learning progress statistics feature).
+    \item Preparing for future integration of learning analytics functionality.
+\end{itemize}
+
 
 \section{Structure of the Report}
 This report is structured as follows:
