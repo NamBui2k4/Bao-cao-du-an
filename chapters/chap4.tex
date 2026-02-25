@@ -49,7 +49,6 @@ To clarify the main flows in the system, the following sequence diagrams illustr
     \caption{Sequence diagram: User sends a message}
     \label{fig:seq-send-message}
 \end{figure}
-\lipsum[15-16]
 
 \paragraph{b) WebSocket Authentication Flow}
 \begin{figure}[H]
@@ -58,7 +57,6 @@ To clarify the main flows in the system, the following sequence diagrams illustr
     \caption{Sequence diagram: WebSocket authentication}
     \label{fig:seq-ws-auth}
 \end{figure}
-\lipsum[17]
 
 \paragraph{c) Presence Update Flow}
 \begin{figure}[H]
@@ -67,7 +65,6 @@ To clarify the main flows in the system, the following sequence diagrams illustr
     \caption{Sequence diagram: Presence update}
     \label{fig:seq-presence-update}
 \end{figure} 
-\lipsum[18]
 
 \subsection{Key Architectural Decisions (KADs)}
 \begin{itemize}
@@ -86,64 +83,52 @@ The system is decomposed into modular components, each with clear responsibiliti
 \subsection{WebSocket Gateway Layer}
 Handles client WebSocket connections, authentication, session management, and initial event routing. Ensures secure, persistent, and low-latency connections.
 
-\lipsum[1]
 
 \subsection{Real-Time Message Service}
 Processes inbound and outbound messages, applies business logic (e.g., filtering, validation), and interacts with the pub-sub broker for message fan-out.
 
-\lipsum[2]
 
 \subsection{Channel and Membership Service}
 Manages channels, memberships, roles, and permissions. Provides APIs for channel creation, joining, and membership updates.
 
-\lipsum[3]
 
 \subsection{Persistence Layer (Database + Storage)}
 Stores user, channel, membership, and message data. Ensures durability, consistency, and efficient querying. May use a combination of relational and NoSQL databases, plus object storage for attachments.
 
-\lipsum[4]
 
 \subsection{Message Broker / Pub-Sub Layer}
 Distributes messages to all relevant nodes and services. Enables horizontal scaling and decouples message producers from consumers. Typically implemented with Redis, NATS, or Kafka.
 
-\lipsum[5]
 
 \subsection{Authentication \& Authorization Service}
 Manages user authentication (e.g., JWT), token issuance, validation, and role-based access control (RBAC) enforcement.
 
-\lipsum[6]
 
 \subsection{Admin \& Observability Layer}
 Provides dashboards, metrics, logs, and alerting for operators and administrators. Supports monitoring, troubleshooting, and auditing.
 
-\lipsum[7]
 
 \section{Detailed Backend Architecture}
 
 \subsection{Node.js Service Architecture (Event-Driven Model)}
 The backend leverages Node.js's event-driven, non-blocking I/O model to handle thousands of concurrent connections efficiently. Each service is stateless and communicates via APIs or message queues.
 
-\lipsum[8]
 
 \subsection{Horizontal Scaling Strategy (Clustering, Multi-node)}
 Multiple Node.js instances are deployed across nodes. Clustering and container orchestration (e.g., Kubernetes) enable dynamic scaling. Shared state is minimized; distributed caches and brokers synchronize transient data.
 
-\lipsum[9]
 
 \subsection{Load Balancing and Traffic Routing}
 Traffic is distributed using a reverse proxy (e.g., Nginx, HAProxy) with support for sticky sessions (if session affinity is needed) or stateless routing. Load balancers monitor node health and route traffic accordingly.
 
-\lipsum[10]
 
 \subsubsection{Sticky Sessions vs Stateless Routing}
 Sticky sessions bind a client to a specific gateway for session persistence, while stateless routing allows any gateway to serve any client. Stateless routing is preferred for scalability, but sticky sessions may be used for certain features.
 
-\lipsum[11]
 
 \subsubsection{Reverse Proxy Setup (Nginx/HAProxy)}
 Reverse proxies terminate TLS, balance traffic, and provide DDoS protection. Configuration includes health checks, rate limiting, and WebSocket upgrade support.
 
-\lipsum[12]
 
 \subsection{Connection Lifecycle Management}
 \begin{itemize}
@@ -272,12 +257,10 @@ The hybrid approach leverages the strengths of each technology: NoSQL for scalab
 \subsection{Data Partitioning \& Indexing Strategy}
 Data is partitioned by tenant or channel for scalability. Indexes are created on frequently queried fields (e.g., channel\_id, user\_id, timestamps) to optimize performance.
 
-\lipsum[14]
 
 \subsection{Caching Strategy (Redis)}
 Redis is used for caching hot data (e.g., presence, recent messages) and for pub-sub event distribution. TTLs and eviction policies are tuned for workload patterns.
 
-\lipsum[15]
 
 \section{API \& Protocol Design}
 
@@ -330,7 +313,6 @@ REST APIs support channel management, user administration, and metrics. Endpoint
 \subsection{Authentication Workflow (JWT, Token Refresh, Validation)}
 Clients authenticate via REST, receive JWTs, and use them for WebSocket upgrades. Token refresh and validation endpoints ensure session continuity and security.
 
-\lipsum[17]
 
 \section{User Interface Design}
 
@@ -346,7 +328,6 @@ Clients authenticate via REST, receive JWTs, and use them for WebSocket upgrades
 \subsection{User Interaction Flow}
 Users log in, join channels, send/receive messages, and manage settings. The UI provides intuitive navigation and real-time feedback.
 
-\lipsum[18]
 
 \subsection{Real-Time UX Elements}
 
@@ -403,59 +384,48 @@ User passwords are hashed using bcrypt or argon2 with a unique salt per user. Se
 \subsection{Performance Targets (Latency, Throughput)}
 The system targets $<$150ms P95 message delivery latency and $\geq$10,000 messages/sec throughput per region.
 
-\lipsum[24]
 
 \subsection{Scaling WebSocket Gateways}
 Gateways are stateless and horizontally scalable. Autoscaling policies respond to connection and CPU load.
 
-\lipsum[25]
 
 \subsection{Message Fan-out Optimization}
 Batching, efficient pub-sub, and selective delivery minimize fan-out latency and resource usage.
 
-\lipsum[26]
 
 \subsection{Distributed Rate Limiting}
 Rate limits are enforced using distributed counters (e.g., Redis) to prevent abuse across all nodes.
 
-\lipsum[27]
 
 \subsection{Backpressure Handling}
 The system detects slow consumers and applies backpressure, dropping or buffering messages as needed to maintain stability.
 
-\lipsum[28]
 
 \subsection{Load Testing Scenarios (Design-level)}
 Load tests simulate peak usage, network partitions, and failover to validate design assumptions and performance targets.
 
-\lipsum[29]
 
 \section{High Availability \& Fault Tolerance}
 
 \subsection{Failover Strategy}
 Redundant nodes and services are deployed in each region. Health checks and automated failover minimize downtime.
 
-\lipsum[30]
 
 \subsection{Auto-Reconnect Protocol}
 Clients implement exponential backoff and session resumption to recover from transient failures.
 
-\lipsum[31]
 
 \subsection{Multi-Zone Deployment Architecture}
 Services are deployed across multiple availability zones for resilience to data center failures.
 
-\lipsum[32]
 
 \subsection{Data Replication \& Redundancy}
 Critical data is replicated across zones and backed up regularly. Consensus protocols (e.g., Raft) may be used for consistency.
 
-\lipsum[33]
 
 \subsection{Recovery from Node Failure}
 Automated orchestration replaces failed nodes and restores service. Monitoring and alerting ensure rapid response.
 
-\lipsum[34]
 
 \section{Summary of the System Design}
 

@@ -1,61 +1,62 @@
 \chapter{Literature Review}
 
+This chapter provides a comprehensive review of existing literature, relevant technologies, and theoretical foundations that underpin the design and evaluation of software architectures in the context of Learning Management Systems (LMS). By synthesizing insights from prior research and established architectural principles, this chapter establishes the conceptual framework used in subsequent experimental chapters.
+
 \section{Related Works}
-The field of real-time messaging has seen significant advancements in both academic research and industry practice. Early systems focused on basic message delivery, but modern solutions emphasize scalability, low latency, and reliability \cite{guth2018comparison,kleppmann2013designing,wang2018scalable}. Comparative studies have evaluated the strengths and weaknesses of various protocols and architectures, providing valuable insights for system designers \cite{li2020realtime,smith2020cloud}.
+The relationship between software architecture selection and system quality has been a recurring subject in both academia and industry. A growing body of work examines how architectural choices affect maintainability, scalability, and the cost of change — the three dimensions most relevant to this study.
+\subsection{Existing Learning Management System Implementations}
 
-\subsection{Existing Real-Time Messaging Solutions}
-Numerous real-time messaging solutions have been developed, each with unique trade-offs in terms of scalability, protocol support, and developer experience \cite{tilkov2018nodejs,brown2019websockets,rauch2022scalable}. For example, Socket.IO and WebSocket-based frameworks are widely adopted for their ease of use and performance, while cloud-hosted services like Firebase and Pusher offer managed infrastructure \cite{martin2021websocket,blogmicro2023}.
+Learning Management Systems have traditionally been implemented as monolithic applications due to their relative simplicity and low initial infrastructure cost. Early open-source platforms such as Moodle and Blackboard exemplify this approach, bundling authentication, course management, content delivery, and assessment into a single deployable unit. While this architectural choice accelerates initial development, it introduces well-documented challenges as the system matures: tightly coupled modules hinder independent deployment, and a fault in one subsystem can cascade across the entire platform.
 
-Here are some popular real-time messaging solutions:
-\begin{itemize}
-    \item \textbf{Socket.IO}: A widely used library for real-time web applications.
-    \item \textbf{Firebase Realtime Database}: A cloud-hosted NoSQL database that supports real-time data synchronization.
-    \item \textbf{Pusher}: A hosted service that provides real-time APIs for web and mobile applications.
-    \item \textbf{SignalR}: A Microsoft library for adding real-time web functionality to applications.
-    \item \textbf{MQTT}: A lightweight messaging protocol for small sensors and mobile devices, optimized for high-latency or unreliable networks.
-\end{itemize}
+More recent commercial LMS platforms, notably Canvas and Google Classroom, have progressively migrated toward service-oriented or modular designs. These migrations, often documented as engineering case studies, highlight a common pattern: monolithic systems accumulate technical debt at a rate proportional to team size and feature velocity, eventually motivating architectural refactoring. Dinh (2023) describes the design and implementation of an e-learning system and identifies modular decomposition as a prerequisite for long-term maintainability, noting that systems designed without clear module boundaries suffer disproportionate rework costs when requirements evolve [1].
 
-\lipsum[12-14]
-Recent literature also highlights the importance of robust message brokers and distributed pub/sub mechanisms in supporting high-throughput, low-latency communication \cite{nguyen2021pubsub,redisdocs,blogkafka2022}. These technologies enable efficient fan-out and horizontal scaling, which are critical for large-scale deployments \cite{gonzalez2022websocket,kim2023iot}.
+\subsection{Comparative Studies on Software Architectures}
 
-\subsection{Research Studies on Real-Time Systems}
-Research on real-time systems has explored a variety of topics, including protocol efficiency, system reliability, and performance optimization \cite{baker2017websocket,li2020realtime,zhang2021aws}. Studies have shown that cloud-native deployment patterns and microservices architectures can significantly improve scalability and maintainability \cite{fowler2015microservices,smith2020cloud}.
+The comparative evaluation of Monolithic, Modular Monolith, and Microservices architectures has attracted significant research attention. Xu (2025) provides a widely referenced comparative overview, arguing that each architectural style occupies a distinct position on the spectrum between simplicity and operational flexibility [2]. The study concludes that no single architecture universally outperforms the others; rather, the appropriate choice is contingent on team size, system scale, and expected rate of change.
+
+Empirical studies applying scenario-based evaluation — a methodology where predefined change scenarios are applied to each architectural variant — have demonstrated measurable differences in change impact scope. Research in enterprise software contexts consistently reports that Microservices architectures isolate changes to smaller code surfaces but introduce higher coordination costs through inter-service communication. Modular Monolith architectures are identified as an intermediate solution that preserves deployment simplicity while enforcing module boundaries through intra-process contracts.
+
+The gap in the existing literature that this project addresses is the scarcity of studies that implement all three architectures on a single, well-defined application domain under identical functional requirements, then apply consistent change scenarios across all three variants. Most comparative studies rely on theoretical analysis or survey data rather than controlled empirical implementation.
 
 \section{Relevant Technologies}
-The development of real-time messaging systems leverages a broad set of technologies, from programming languages and frameworks to cloud platforms and monitoring tools \cite{cantelon2017nodejs,awsdocs,redisdocs}. Node.js, WebSocket, and Redis are particularly prominent in recent implementations \cite{tilkov2018nodejs,brown2019websockets}.
+This section reviews the key technologies adopted across all three architectural implementations in this project. A deliberate decision was made to maintain a uniform technology stack — NestJS, Vue.js, and PostgreSQL — across all three architectures, ensuring that observed differences are attributable to architectural structure rather than technology choice.
 
-\subsection{Node.js}
-Node.js is a powerful JavaScript runtime built on Chrome's V8 engine, designed for building scalable network applications. Its core architecture is event-driven and asynchronous, allowing it to handle thousands of concurrent connections efficiently. The non-blocking I/O model means that operations such as reading files or querying databases do not halt the execution of other code, which is crucial for real-time systems. This design enables Node.js to deliver high throughput and low latency, making it ideal for chat applications, streaming services, and collaborative tools. The event loop, a central component of Node.js, manages all asynchronous operations and ensures the system remains responsive under heavy load.
+\subsection{NestJS Framework}
+NestJS is a progressive Node.js framework for building server-side applications, built on top of TypeScript and inspired by Angular's modular design principles. Its native support for modules, providers, controllers, and dependency injection makes it particularly well-suited for implementing all three target architectures within a consistent programming model.
+
+For the Monolithic implementation, NestJS provides a single application context with shared services and a common database connection. For the Modular Monolith, NestJS modules with explicit public APIs serve as the primary mechanism for enforcing module boundaries. For the Microservices implementation, NestJS's built-in microservices transport layer — supporting patterns such as TCP, Redis-based message queues, and gRPC — provides the inter-service communication infrastructure.
+
+The framework's module system is architecturally significant: a NestJS module encapsulates a cohesive set of providers and can explicitly declare its public interface. When inter-module dependencies are forced to go through declared exports, the framework structurally prevents the accidental cross-cutting dependencies that commonly undermine modular designs. This property is central to the Modular Monolith implementation evaluated in this study.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{images/Node.js-Architecture-Chart.png}
-    \caption{Node.js Architecture: Emphasizing Async, Event-Driven, Non-Blocking I/O}
-    \label{fig:nodejs-architecture}
+    \includegraphics[width=0.7\textwidth]{images/Nestjs.png}
+    \caption{Nestjs in Microservice achitecture}
+    \label{fig:nestjs}
 \end{figure}
 
-Node.js also benefits from a vast ecosystem of libraries and frameworks available through npm, which accelerates development and fosters innovation. Its single-threaded nature, combined with the event-driven paradigm, allows developers to write simple code that scales well across distributed systems. However, this architecture also requires careful handling of CPU-intensive tasks, as they can block the event loop and degrade performance. To address this, Node.js provides mechanisms such as worker threads and clustering to distribute workloads. Overall, Node.js has become a cornerstone technology for modern, real-time web applications due to its efficiency and flexibility.
+\subsection{Vue.js Frontend Framework}
 
-\subsection{WebSocket Protocol}
+Vue.js is a progressive JavaScript framework for building user interfaces, adopted in this project for the frontend layer common to all three architectural variants. Maintaining a single frontend codebase across all three backends allows the study to isolate the impact of backend architectural choices without introducing frontend variability.
 
-The WebSocket protocol is a communication standard that enables persistent, full-duplex connections between clients and servers. Unlike traditional HTTP, which requires a new connection for each request-response cycle, WebSocket establishes a single, long-lived connection that remains open for continuous data exchange. This approach significantly reduces the overhead associated with connection setup and teardown, resulting in lower latency and improved performance for real-time applications. WebSocket is particularly well-suited for scenarios where instant updates are required, such as online gaming, financial trading platforms, and collaborative editing tools. Its ability to push data from the server to the client without repeated polling is a key advantage over HTTP.
-\lipsum[1]
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{images/websocket-vs-http.png}
-    \caption{WebSocket vs HTTP: Persistent vs Short-Lived Connections}
-    \label{fig:websocket-vs-http}
-\end{figure}
+In the Monolithic and Modular Monolith configurations, the Vue.js application communicates with a single backend API endpoint. In the Microservices configuration, an API Gateway aggregates requests from the Vue.js frontend and routes them to the appropriate downstream service. This pattern, referred to as the Backend-for-Frontend (BFF) pattern, is a standard approach in production Microservices deployments.
 
-In addition to its efficiency, the WebSocket protocol supports bi-directional communication, allowing both the client and server to send messages independently at any time. This is a major improvement over HTTP, where the client must always initiate communication. The protocol operates over a single TCP connection, which simplifies firewall traversal and network management. Security is addressed through the use of the wss:// scheme, which encrypts WebSocket traffic using TLS. As a result, WebSocket has become the protocol of choice for building interactive, real-time web applications that demand high responsiveness and scalability.
+\subsection{PostgreSQL and Database Strategy}
 
-\subsection{Redis / Message Brokers}
-Redis is a popular choice for message brokering and caching in real-time systems due to its high performance and support for pub/sub patterns \cite{redisdocs,nguyen2021pubsub,blogkafka2022}. Distributed message brokers such as Kafka are also increasingly used to support large-scale, fault-tolerant deployments \cite{blogkafka2022,gonzalez2022websocket}.
+PostgreSQL is used as the primary relational database across all three architectural implementations. However, the database strategy differs meaningfully between architectures and constitutes one of the most substantive structural differences among the three variants.
+
+In the Monolithic architecture, all domain entities — Students, Lecturer, Reviewer, Admin, courses, enrollments, assignments, grades, and progress records — reside in a single shared database schema. This schema is accessed by all application modules, creating a high degree of database-level coupling.
+
+In the Modular Monolith, the database schema is organized into distinct namespaces or schemas aligned with module boundaries. While a single physical database instance is maintained, cross-module queries are discouraged; modules access each other's data exclusively through service interfaces, preserving logical separation.
+
+In the Microservices architecture, the  principle is applied: each service owns its own state. The state requirements are resolved through API calls rather than shared database access, providing the highest degree of data isolation but introducing challenges in consistency and cross-service querying.
 
 \subsection{Load Balancing and Reverse Proxies}
 
-Load balancing and reverse proxy solutions are essential components in modern web architectures, especially for real-time messaging systems. A reverse proxy acts as an intermediary between clients and backend servers, receiving requests from the internet and forwarding them to the appropriate server. This setup not only helps distribute incoming traffic evenly across multiple servers but also enhances security by hiding the internal server structure from external users. Load balancers can detect server health and automatically reroute traffic if a server becomes unavailable, ensuring high availability and reliability. By managing connection surges and distributing workloads, these solutions prevent individual servers from becoming overwhelmed during peak usage.
 
+Load balancing and reverse proxy mechanisms play a relevant but architecturally differentiated role across the three implementations evaluated in this project. A reverse proxy receives incoming client requests and forwards them to one or more backend servers, while also handling concerns such as TLS termination, request routing, and health-based traffic exclusion. In this project, Nginx serves as the reverse proxy across all three architectural variants, providing a consistent ingress layer.
+
+In the Monolithic and Modular Monolith architectures, the reverse proxy configuration is straightforward and identical between the two: Nginx routes all incoming traffic to a single application upstream, applying round-robin load balancing across multiple instances when horizontal scaling is required. The modular boundaries enforced within the Modular Monolith are invisible at the infrastructure level, which reflects one of its key advantages — improved internal code organization without additional operational overhead.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{images/Reverse-Proxy.png}
@@ -63,10 +64,20 @@ Load balancing and reverse proxy solutions are essential components in modern we
     \label{fig:reverse-proxy}
 \end{figure}
 
-In addition to balancing loads, reverse proxies often provide features such as SSL termination, caching, and compression, which further optimize performance and security. They can also enforce access controls and monitor traffic for malicious activity, acting as a first line of defense against attacks. Popular tools like Nginx and HAProxy are widely used due to their robustness and configurability. In real-time systems, reverse proxies play a crucial role in maintaining low latency and seamless user experiences by efficiently routing requests and managing persistent connections. Their ability to scale horizontally by adding more backend servers makes them indispensable for large-scale, distributed applications.
+In the Microservices architecture, the reverse proxy role expands into two layers. Nginx handles TLS termination and acts as the outermost ingress point, forwarding all requests to a NestJS API Gateway, which in turn applies service-specific routing rules to direct requests to the appropriate downstream service. This two-layer pattern abstracts the internal service decomposition from the Vue.js frontend and enables per-service independent scaling. However, it also introduces additional configuration complexity — a quantifiable dimension in the operational complexity criterion of this study's comparison framework.
 
-\subsection{Real-Time Frameworks / Libraries}
-A variety of frameworks and libraries have emerged to simplify the development of real-time features, including Socket.IO, uWebSockets.js, and SignalR \cite{tilkov2018nodejs,rauch2022scalable,blogmicro2023}. These tools abstract away protocol details and provide robust APIs for developers.
+
+\subsection{Docker and Containerization}
+Docker is used to containerize all architectural implementations, ensuring consistent deployment environments and enabling fair performance comparisons. Each architecture is packaged as a Docker Compose configuration specifying the required services, database instances, and network topology.
+
+For the Monolithic architecture, a single application container is defined alongside a shared database container. For the Modular Monolith, the deployment configuration remains similar to the Monolithic variant, reflecting the unified deployment model. For the Microservices architecture, individual containers are defined per service, along with a shared API Gateway container and service-specific database containers. This configuration difference itself constitutes a measurable dimension of operational complexity in the comparative evaluation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/Docker.png}
+    \caption{Docker: Handling service containerization for microservice (for example)}
+    \label{fig:reverse-proxy}
+\end{figure}
 
 \section{Theoretical Principles and Architectural Models}
 The design of scalable messaging systems is grounded in theoretical principles such as event-driven architecture, publish–subscribe models, and microservices \cite{fowler2015microservices,kleppmann2013designing,nguyen2021pubsub}. These models enable modularity, extensibility, and efficient resource utilization \cite{guth2018comparison,li2020realtime}.
@@ -89,4 +100,3 @@ Consistency models define how updates are propagated and observed in distributed
 \section{Summary}
 This chapter has reviewed existing real-time messaging solutions, relevant technologies, and theoretical principles that underpin the design of scalable messaging systems. The insights gained from this literature review will inform the design and implementation choices made in subsequent chapters.
 
-\lipsum[14]
