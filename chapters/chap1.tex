@@ -1,29 +1,137 @@
 \chapter{Introduction}
 
 \section{Background and Rationale}
-The demand for scalable real-time messaging systems has grown rapidly with the proliferation of collaborative applications, social platforms, and IoT devices \cite{guth2018comparison,tilkov2018nodejs}. Node.js, with its event-driven architecture, has become a popular choice for building such systems due to its ability to handle high concurrency and low-latency communication \cite{cantelon2017nodejs,nodejsdocs}. WebSocket technology further enables persistent, bidirectional communication channels, which are essential for instant message delivery and interactive user experiences \cite{brown2019websockets,baker2017websocket}. Recent advances in cloud infrastructure and managed services, such as AWS, have made it feasible to deploy and scale these systems globally \cite{awsdocs,roberts2020aws}.
+
+In recent years,  the rapid growth of technology and the push for digital 
+transformation in education have made the development of robust 
+Learning Management Systems (LMS) more urgent than ever. The architecture 
+behind such systems is not merely a technical choice; it directly shapes 
+their scalability, maintainability, and long-term. Approaches such as 
+Monolithic, Modular Monolith, and Microservices have emerged as dominant 
+paradigms, each offering unique strengths and trade-offs. This project will 
+explore and contrast these three architectural models in the context of 
+building an LMS, focusing on functional modules such as user authentication, 
+course management, content delivery, assessment, and progress tracking.
+% \cite{nguyen_van_dinh_2023}.
 
 \section{Project Objectives}
-\lipsum[3]\\[3pt]
-The objectives of this project are:
+
+In general , the objectives of this project is building and 
+deploying a Learning Management System (LMS) in form of three 
+different software architectures.
+
+For specific, the following targets will be expected:
 \begin{enumerate}
-    \item To design a scalable real-time messaging system using Node.js and WebSocket.
-    \item To implement efficient message handling and delivery mechanisms.
-    \item To evaluate the performance and scalability of the system under various load conditions.
-    \item To document the design and implementation process for future reference.
-    \item To explore potential applications and extensions of the messaging system.
+    \item Design an LMS system with core functions (CRUD, 
+    authentication / authorization, enrollment, 
+    learning content, assignment \& grade, learning process,..)
+
+    \item Deploy the LMS system according to three different architectures
+    \item Develop scenarios for system change and expansion
+    \item Compare architectures based on specific technical criteria
+    \item Analyze the advantages and disadvantages of each 
+    architecture in actual implementation
+
 \end{enumerate}
 
 \section{Scope of the Project}
-\lipsum[4-5]
+
+The scope of the project focuses on researching, designing and comparing three 
+software architectures when applied to the same business problem. The LMS system 
+is only used as a research object to illustrate and verify the above architectures, 
+not the main development goal of the project. In other words, the focus of the 
+topic is software architecture analysis, while LMS construction only serves as 
+a means for deployment and evaluation.
+
+Across all three architectures, the system remains core functional modules stable
+(e.g., authentication and authorization, enrollment, learning 
+content, assignments and grading, progress tracking) even existing changes
+in architecture. Extended features such as learning analytics or recommendation 
+algorithms are acknowledged but reserved for future work.
+
+The project does not prioritize detailed user interface or user experience (UI/UX) 
+design, employing only minimal interfaces sufficient for testing and demonstration. 
+Regarding technology choices, the team adopts contemporary frameworks considered 
+most suitable at present, namely NestJS and Vue.js due to their widespread adoption, 
+strong community support, and suitability for modular.
+
+Other architectures (e.g., serverless, large-scale event-driven architecture, 
+or complex hybrid architectures) are outside the scope of the study.
+
 
 \section{Research Methodology}
-\lipsum[6-7]
+
+With a comparative research orientation, this project focuses on an empirical 
+architectural study rather than a pure software development process.
 
 \subsection{Theorical Methodology}
-\lipsum[8-9]
+The first phase includes refering and reviewing design principle theories
+to clarify the basic characteristics of the elearning system and building
+techniques. Those theories are collected from reputable academic papers and
+professional blogs \cite{nguyen_van_dinh_2023,Alex_xu_2025}. This phases also
+need to figure out the advantages and limitations of the three architectures.
+During refering, our team proposes some search keywords including: 
+“monolithic, modular monolith, and microservices”, "elearning systems design",
+"Low \& High coupling".
+
+The theories analysis process is carried out using a thematic synthesis 
+approach, focusing on extracting core principles such as coupling, cohesion, 
+deployment unit, inter-component communication, and scalability. From there, 
+the study identifies five main comparison criteria: 
+\begin{itemize}
+    \item Degree of module separation, 
+    \item Scope of impact when modifying functionality, 
+    \item Scalability of individual functional components, 
+    \item Complexity of deployment and operation, 
+    \item Suitability for different system scales: small, medium, large.
+\end{itemize}
+
+The result of the theoretical phase is a comparison framework 
+that serves as the foundation for the experimental part, ensuring 
+that the assessment is not subjective but based on recognized 
+principles and evidence.
+
 \subsection{Practical Methodology}
-\lipsum[9-10]
+
+The experimental phase is the focus of the research. At the begining,
+team will outline some ideas and functional requirement into 
+Software Requirement Specs (SRS) in order to be convenient for designing.
+In SRS, the system is decomposed into consistent business subsystems 
+including: Identity \& Access Management, User Profile, Course Management, 
+Enrollment Management, Learning Content, Assessment \& Grading, Progress 
+Tracking, along with future expansion subsystems (Learning Analytics and AI). 
+Maintaining the same business decomposition across all three architectures 
+ensures fairness and objectivity: differences only come from the choice of 
+architectural structure, not from functional variation.
+
+The LMS system is implemented three times, each corresponding to one of 
+the selected architectural styles. All of them, we use the 
+same technology stack (NestJS, Vuejs, PostgreSQL) to control extraneous 
+variables, and are containerized with Docker to measure deployments fairly.
+
+A scenario-based evaluation approach is applied to all implementations 
+using predefined change scenarios, including:
+\begin{itemize}
+    \item Modifying the learning scoring logic
+    \item Adding a learning progress statistics feature
+    \item Preparing for future integration of learning analytics functionality
+\end{itemize}
+
+The evaluation is performed using scenario-based evaluation, a common 
+approach in software architecture research to simulate real-life changes. 
+Three change scenarios are applied to all three versions in turn:
+\begin{itemize}
+    \item Modifying the learning scoring logic.
+    \item Adding a learning progress statistics feature (adding a learning progress statistics feature).
+    \item Preparing for future integration of learning analytics functionality.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/three-achitech.png}
+    \caption{Monolith vs Microservices vs Modular Monoliths: What's the Right Choice  \cite{Alex_xu_2025}}
+    \label{fig:nodejs-architecture}
+\end{figure}
 
 \section{Structure of the Report}
 This report is structured as follows:
@@ -35,4 +143,3 @@ This report is structured as follows:
     \item \textbf{Chapter 5}: Conclusion and Future Work - Summarizes findings and suggests future directions.
     \item \textbf{Appendices}: Contains supplementary material and code listings.
 \end{itemize}
-\lipsum[11-14]
