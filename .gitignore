@@ -9,3 +9,6 @@ main.synctex.gz
 main.toc
 chapters/*.aux
 appendices/*.aux
+main.fdb_latexmk
+main.fls
+main.xdv
