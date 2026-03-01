@@ -10,95 +10,50 @@ The relationship between software architecture selection and system quality has 
 
 Learning Management Systems have traditionally been implemented as monolithic applications due to their relative simplicity and low initial infrastructure cost. Early open-source platforms such as Moodle and Blackboard exemplify this approach, bundling authentication, course management, content delivery, and assessment into a single deployable unit. While this architectural choice accelerates initial development, it introduces well-documented challenges as the system matures: tightly coupled modules hinder independent deployment, and a fault in one subsystem can cascade across the entire platform.
 
-More recent commercial LMS platforms, notably Canvas and Google Classroom, have progressively migrated toward service-oriented or modular designs. These migrations, often documented as engineering case studies, highlight a common pattern: monolithic systems accumulate technical debt at a rate proportional to team size and feature velocity, eventually motivating architectural refactoring. Dinh (2023) describes the design and implementation of an e-learning system and identifies modular decomposition as a prerequisite for long-term maintainability, noting that systems designed without clear module boundaries suffer disproportionate rework costs when requirements evolve [1].
+More recent commercial LMS platforms, notably Canvas and Google Classroom, have progressively migrated toward service-oriented. These migrations, often documented as engineering case studies, highlight a common pattern: monolithic systems accumulate technical debt at a rate proportional to team size and feature velocity, eventually motivating architectural refactoring. Dinh (2023) describes the design and implementation of an e-learning system and identifies modular decomposition as a prerequisite for long-term maintainability, noting that systems designed without clear module boundaries suffer disproportionate rework costs when requirements evolve [1].
 
 \subsection{Comparative Studies on Software Architectures}
 
-The comparative evaluation of Monolithic, Modular Monolith, and Microservices architectures has attracted significant research attention. Xu (2025) provides a widely referenced comparative overview, arguing that each architectural style occupies a distinct position on the spectrum between simplicity and operational flexibility [2]. The study concludes that no single architecture universally outperforms the others; rather, the appropriate choice is contingent on team size, system scale, and expected rate of change.
+The comparative evaluation of Monolithic and Microservices architectures has attracted significant research attention. Xu (2025)
+provides a widely referenced comparative overview, arguing that each architectural style occupies a distinct position on the 
+spectrum between simplicity and operational flexibility [2]. The study concludes that no single architecture universally outperforms 
+the others; rather, the appropriate choice is contingent on team size, system scale, and expected rate of change.
 
-Empirical studies applying scenario-based evaluation — a methodology where predefined change scenarios are applied to each architectural variant — have demonstrated measurable differences in change impact scope. Research in enterprise software contexts consistently reports that Microservices architectures isolate changes to smaller code surfaces but introduce higher coordination costs through inter-service communication. Modular Monolith architectures are identified as an intermediate solution that preserves deployment simplicity while enforcing module boundaries through intra-process contracts.
+Empirical studies applying scenario-based evaluation — a methodology where predefined change scenarios are applied to each 
+architectural variant — have demonstrated measurable differences in change impact scope. Research in enterprise software 
+contexts consistently reports that Microservices architectures isolate changes to smaller code surfaces but introduce higher 
+coordination costs through inter-service communication.
 
-The gap in the existing literature that this project addresses is the scarcity of studies that implement all three architectures on a single, well-defined application domain under identical functional requirements, then apply consistent change scenarios across all three variants. Most comparative studies rely on theoretical analysis or survey data rather than controlled empirical implementation.
-
-\section{Relevant Technologies}
-This section reviews the key technologies adopted across all three architectural implementations in this project. A deliberate decision was made to maintain a uniform technology stack — NestJS, Vue.js, and PostgreSQL — across all three architectures, ensuring that observed differences are attributable to architectural structure rather than technology choice.
-
-\subsection{NestJS Framework}
-NestJS is a progressive Node.js framework for building server-side applications, built on top of TypeScript and inspired by Angular's modular design principles. Its native support for modules, providers, controllers, and dependency injection makes it particularly well-suited for implementing all three target architectures within a consistent programming model.
-
-For the Monolithic implementation, NestJS provides a single application context with shared services and a common database connection. For the Modular Monolith, NestJS modules with explicit public APIs serve as the primary mechanism for enforcing module boundaries. For the Microservices implementation, NestJS's built-in microservices transport layer — supporting patterns such as TCP, Redis-based message queues, and gRPC — provides the inter-service communication infrastructure.
-
-The framework's module system is architecturally significant: a NestJS module encapsulates a cohesive set of providers and can explicitly declare its public interface. When inter-module dependencies are forced to go through declared exports, the framework structurally prevents the accidental cross-cutting dependencies that commonly undermine modular designs. This property is central to the Modular Monolith implementation evaluated in this study.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{images/Nestjs.png}
-    \caption{Nestjs in Microservice achitecture}
-    \label{fig:nestjs}
-\end{figure}
-
-\subsection{Vue.js Frontend Framework}
-
-Vue.js is a progressive JavaScript framework for building user interfaces, adopted in this project for the frontend layer common to all three architectural variants. Maintaining a single frontend codebase across all three backends allows the study to isolate the impact of backend architectural choices without introducing frontend variability.
-
-In the Monolithic and Modular Monolith configurations, the Vue.js application communicates with a single backend API endpoint. In the Microservices configuration, an API Gateway aggregates requests from the Vue.js frontend and routes them to the appropriate downstream service. This pattern, referred to as the Backend-for-Frontend (BFF) pattern, is a standard approach in production Microservices deployments.
-
-\subsection{PostgreSQL and Database Strategy}
-
-PostgreSQL is used as the primary relational database across all three architectural implementations. However, the database strategy differs meaningfully between architectures and constitutes one of the most substantive structural differences among the three variants.
-
-In the Monolithic architecture, all domain entities — Students, Lecturer, Reviewer, Admin, courses, enrollments, assignments, grades, and progress records — reside in a single shared database schema. This schema is accessed by all application modules, creating a high degree of database-level coupling.
-
-In the Modular Monolith, the database schema is organized into distinct namespaces or schemas aligned with module boundaries. While a single physical database instance is maintained, cross-module queries are discouraged; modules access each other's data exclusively through service interfaces, preserving logical separation.
-
-In the Microservices architecture, the  principle is applied: each service owns its own state. The state requirements are resolved through API calls rather than shared database access, providing the highest degree of data isolation but introducing challenges in consistency and cross-service querying.
-
-\subsection{Load Balancing and Reverse Proxies}
-
-
-Load balancing and reverse proxy mechanisms play a relevant but architecturally differentiated role across the three implementations evaluated in this project. A reverse proxy receives incoming client requests and forwards them to one or more backend servers, while also handling concerns such as TLS termination, request routing, and health-based traffic exclusion. In this project, Nginx serves as the reverse proxy across all three architectural variants, providing a consistent ingress layer.
-
-In the Monolithic and Modular Monolith architectures, the reverse proxy configuration is straightforward and identical between the two: Nginx routes all incoming traffic to a single application upstream, applying round-robin load balancing across multiple instances when horizontal scaling is required. The modular boundaries enforced within the Modular Monolith are invisible at the infrastructure level, which reflects one of its key advantages — improved internal code organization without additional operational overhead.
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{images/Reverse-Proxy.png}
-    \caption{Reverse Proxy: Handling Internet Requests for Multiple Servers}
-    \label{fig:reverse-proxy}
-\end{figure}
-
-In the Microservices architecture, the reverse proxy role expands into two layers. Nginx handles TLS termination and acts as the outermost ingress point, forwarding all requests to a NestJS API Gateway, which in turn applies service-specific routing rules to direct requests to the appropriate downstream service. This two-layer pattern abstracts the internal service decomposition from the Vue.js frontend and enables per-service independent scaling. However, it also introduces additional configuration complexity — a quantifiable dimension in the operational complexity criterion of this study's comparison framework.
-
-
-\subsection{Docker and Containerization}
-Docker is used to containerize all architectural implementations, ensuring consistent deployment environments and enabling fair performance comparisons. Each architecture is packaged as a Docker Compose configuration specifying the required services, database instances, and network topology.
-
-For the Monolithic architecture, a single application container is defined alongside a shared database container. For the Modular Monolith, the deployment configuration remains similar to the Monolithic variant, reflecting the unified deployment model. For the Microservices architecture, individual containers are defined per service, along with a shared API Gateway container and service-specific database containers. This configuration difference itself constitutes a measurable dimension of operational complexity in the comparative evaluation.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{images/Docker.png}
-    \caption{Docker: Handling service containerization for microservice (for example)}
-    \label{fig:reverse-proxy}
-\end{figure}
+The gap in the existing literature that this project addresses is the scarcity of studies that implement all three 
+architectures on a single, well-defined application domain under identical functional requirements, then apply consistent change scenarios across all three variants. Most comparative studies rely on theoretical analysis or survey data rather than controlled empirical implementation.
 
 \section{Theoretical Principles and Architectural Models}
-The comparative framework applied in this study is grounded in established theoretical principles from software architecture research. This section synthesizes the relevant principles and defines the conceptual vocabulary used in the experimental evaluation.
+The comparative framework applied in this study is grounded in established theoretical principles from 
+software architecture research. This section synthesizes the relevant principles and defines the conceptual 
+vocabulary used in the experimental evaluation.
+
 \subsection{Monolithic Architecture}
 A Monolithic architecture deploys all application functionality as a single executable unit. The entire application — encompassing presentation logic, business logic, and data access — is compiled and deployed together. Communication between functional areas occurs through direct function calls within the same process memory space, eliminating network latency for internal interactions.
 The primary strengths of Monolithic architectures are development simplicity and deployment straightforwardness. A development team can run the entire system locally with a single command, and deployment requires only a single artifact. These properties make Monolithic architectures well-suited for small teams and early-stage projects where time-to-market and operational simplicity take precedence.
 The documented limitations of Monolithic architectures become apparent as systems grow. Because all modules share a single deployment unit, a change to any module necessitates redeployment of the entire application. Tight coupling between modules — particularly when modules access each other's data structures directly — means that changes propagate unpredictably through the codebase. Scaling is possible only at the application level; it is not feasible to scale a computationally intensive module independently of the rest of the system.
-\subsection{Modular Monolith Architecture}
-A Modular Monolith is a Monolithic architecture structured with explicit, enforced module boundaries. The application remains deployed as a single unit — retaining the operational simplicity of the Monolithic approach — but its internal organization follows a discipline of high cohesion within modules and low coupling between them.
-The Modular Monolith is characterized by the following structural properties: each module encapsulates a coherent business subdomain; inter-module communication occurs exclusively through well-defined public interfaces; modules do not directly access each other's internal data structures or database tables; and dependencies between modules are explicit and directional, preventing circular dependencies.
-This architectural style addresses many of the maintainability concerns associated with traditional Monolithic architectures while avoiding the operational complexity of Microservices. It is increasingly recommended as an appropriate target for systems that require clear code organization but do not yet require the independent deployability and scaling that Microservices provide. Notably, a well-structured Modular Monolith provides a natural migration path toward Microservices, as each module can, in principle, be extracted into an independent service when the operational context justifies it.
+
 \subsection{Microservices Architecture}
 Microservices architecture decomposes an application into a collection of small, independently deployable services, each responsible for a distinct business capability. Services communicate through lightweight protocols, typically HTTP REST or asynchronous message queues, and are deployed and scaled independently.
 The defining characteristics of Microservices architectures include: independent deployability, enabling a team to release a change to one service without coordinating with other teams; polyglot persistence, allowing each service to select the database technology most appropriate for its workload; fault isolation, limiting the blast radius of a service failure to that service's consumers; and independent scalability, enabling resource allocation proportional to the demand on each service.
 These properties come at a cost. The introduction of network boundaries between services introduces latency and failure modes absent in single-process architectures. Distributed transactions — operations requiring consistency across multiple services — require explicit coordination patterns such as sagas or two-phase commit. Operational complexity increases significantly: the system requires service discovery, load balancing, distributed tracing, centralized logging, and health monitoring infrastructure that is unnecessary in Monolithic deployments. For LMS systems of small to medium scale, these overheads may outweigh the scalability and isolation benefits.
 \subsection{ Coupling, Cohesion, and Change Impact}
 Theoretical Foundations
-The concepts of coupling and cohesion were formally established by Yourdon and Constantine (1979) in Structured Design: Fundamentals of a Discipline of Computer Program and Systems Design, where they were organized into a classification hierarchy ranging from the most desirable to the least desirable forms of each property. Their classification of coupling spans from data coupling — in which modules share only the minimum necessary data — through stamp, control, external, and common coupling, to content coupling, in which one module directly modifies the internals of another. Cohesion is similarly ordered from coincidental cohesion, in which elements of a module are grouped arbitrarily, to functional cohesion, in which every element contributes to a single, well-defined purpose.
-The theoretical justification for module decomposition based on these properties was articulated by Parnas (1972) in the seminal paper "On the Criteria To Be Used in Decomposing Systems into Modules." Parnas argued that the correct criterion for decomposition is the principle of information hiding: each module should encapsulate a design decision that is likely to change, exposing only what is necessary through a stable interface. This principle directly informs the module boundary definitions applied in both the Modular Monolith and Microservices implementations in this study.
+The concepts of coupling and cohesion were formally established by Yourdon and Constantine (1979) in Structured Design: Fundamentals 
+of a Discipline of Computer Program and Systems Design, where they were organized into a classification hierarchy ranging from the 
+most desirable to the least desirable forms of each property. Their classification of coupling spans from data coupling — in which 
+modules share only the minimum necessary data — through stamp, control, external, and common coupling, to content coupling, in which 
+one module directly modifies the internals of another. Cohesion is similarly ordered from coincidental cohesion, in which elements of 
+a module are grouped arbitrarily, to functional cohesion, in which every element contributes to a single, well-defined purpose.
+The theoretical justification for module decomposition based on these properties was articulated by Parnas (1972) in the seminal paper 
+"On the Criteria To Be Used in Decomposing Systems into Modules." Parnas argued that the correct criterion for decomposition is the 
+principle of information hiding: each module should encapsulate a design decision that is likely to change, exposing only what is 
+necessary through a stable interface. This principle directly informs the module boundary definitions applied in Microservices 
+implementations in this study.
 
 Measuring Coupling
 Robert C. Martin (2000) extended these foundational concepts into quantifiable metrics applicable to object-oriented and component-based systems. Two complementary coupling measures are defined at the module level. Afferent coupling (Ca) counts the number of external modules that depend on a given module — a measure of its responsibility to others. Efferent coupling (Ce) counts the number of external modules upon which a given module depends — a measure of its sensitivity to external change. From these, Martin derives the Instability metric:
@@ -147,8 +102,10 @@ Monolithic architectures support only application-level horizontal scaling along
 Modular Monolith architectures, as single deployment units, are similarly constrained to X-axis scaling. However, the presence of clearly defined module boundaries preserves structural scalability in the sense of Bondi (2000): the architecture can accommodate the addition of new modules without global reorganization, and the boundary discipline facilitates future extraction of high-demand modules into independent services should operational requirements change.
 Microservices architectures extend scaling capability to the Y-axis: individual services can be scaled in proportion to their specific demand, without replicating components that are not under load. In the context of an LMS, this means that the assessment service can be independently scaled during high-traffic examination periods without increasing the resource footprint of the course management or content delivery services. This fine-grained scaling efficiency is a primary operational advantage of the Microservices style, though it is realized only at the cost of the infrastructure complexity described in Section 2.3.3.
 
-\section{Comparison Framework}
-Based on the theoretical principles reviewed in the preceding sections and informed by the existing comparative literature, this project adopts the following five evaluation criteria for the architectural comparison. These criteria are applied consistently across all three change scenarios defined in Chapter 1.
+\section{Comparison Methology}
+Based on the theoretical principles reviewed in the preceding sections and informed by the existing 
+comparative literature, this project adopts the following five evaluation criteria for the architectural comparison. 
+These criteria are applied consistently across all three change scenarios defined in Chapter 1.
 
 \begin{table}[h]
 \centering
@@ -187,7 +144,84 @@ Qualitative assessment informed by experimental results and literature. \\
 \caption{Evaluation Criteria for Architectural Comparison}
 \end{table}
 
-This framework extends the theoretical analysis presented in the comparative literature by grounding each criterion in observable experimental measurements. The change scenarios defined in Chapter 1 — modifying grading logic, adding progress statistics, and preparing for learning analytics integration — are designed to stress-test each criterion across architectures of increasing functional complexity.
+This framework extends the theoretical analysis presented in the comparative literature 
+by grounding each criterion in observable experimental measurements. The change scenarios defined 
+in Chapter 1 — modifying grading logic, adding progress statistics, and preparing for learning analytics 
+integration — are designed to stress-test each criterion across architectures of increasing functional complexity.
+
+
+\section{Relevant Technologies}
+This section reviews the key technologies adopted across all three architectural implementations in this project. A deliberate decision was made to maintain a uniform technology stack — NestJS, Vue.js, and PostgreSQL — across all three architectures, ensuring that observed differences are attributable to architectural structure rather than technology choice.
+
+\subsection{NestJS Framework}
+NestJS is a progressive Node.js framework for building server-side applications, built on top of TypeScript and inspired 
+by Angular's modular design principles. Its native support for modules, providers, controllers, and dependency 
+injection makes it particularly well-suited for implementing all three target architectures within a consistent programming model.
+
+For the Monolithic implementation, NestJS provides a single application context with shared services and a common database connection. For the Microservices implementation, NestJS's built-in microservices transport layer — supporting patterns such as TCP, Redis-based message queues, and gRPC — provides the inter-service communication infrastructure.
+
+The framework's module system is architecturally significant: a NestJS module encapsulates a cohesive set of providers 
+and can explicitly declare its public interface. When inter-module dependencies are forced to go through declared exports, 
+the framework structurally prevents the accidental cross-cutting dependencies that commonly undermine modular designs. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/Nestjs.png}
+    \caption{Nestjs in Microservice achitecture}
+    \label{fig:nestjs}
+\end{figure}
+
+\subsection{Vue.js Frontend Framework}
+
+Vue.js is a progressive JavaScript framework for building user interfaces, adopted in this project for the frontend layer common to all three architectural variants. Maintaining a single frontend codebase across all three backends allows the study to isolate the impact of backend architectural choices without introducing frontend variability.
+
+In the Monolithic configurations, the Vue.js application communicates with a single backend API endpoint. In the Microservices 
+configuration, an API Gateway aggregates requests from the Vue.js frontend and routes them to 
+the appropriate downstream service. This pattern, referred to as the Backend-for-Frontend (BFF) 
+pattern, is a standard approach in production Microservices deployments.
+
+\subsection{PostgreSQL and Database Strategy}
+
+PostgreSQL is used as the primary relational database across all three architectural implementations. However, the database strategy differs meaningfully between architectures and constitutes one of the most substantive structural differences among the three variants.
+
+In the Monolithic architecture, all domain entities — Students, Lecturer, Reviewer, Admin, courses, enrollments, assignments, grades, and progress records — reside in a single shared database schema. This schema is accessed by all application modules, creating a high degree of database-level coupling.
+
+On the other hand, Microservices possesses its special principle: each service owns its own state. The state requirements are resolved through API calls rather than shared database access, providing the highest degree of data isolation but introducing challenges in consistency and cross-service querying.
+
+\subsection{Load Balancing and Reverse Proxies}
+
+
+Load balancing and reverse proxy mechanisms play a relevant but architecturally differentiated role across the three implementations evaluated in this project. A reverse proxy receives incoming client requests and forwards them to one or more backend servers, while also handling concerns such as TLS termination, request routing, and health-based traffic exclusion. In this project, Nginx serves as the reverse proxy across all three architectural variants, providing a consistent ingress layer.
+
+For Monolithic, the reverse proxy configuration is straightforward and identical between the two: Nginx 
+routes all incoming traffic to a single application upstream, applying round-robin load balancing 
+across multiple instances when horizontal scaling is required.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/Reverse-Proxy.png}
+    \caption{Reverse Proxy: Handling Internet Requests for Multiple Servers}
+    \label{fig:reverse-proxy}
+\end{figure}
+
+In the Microservices architecture, the reverse proxy role expands into two layers. Nginx handles TLS termination and acts as the outermost ingress point, forwarding all requests to a NestJS API Gateway, which in turn applies service-specific routing rules to direct requests to the appropriate downstream service. This two-layer pattern abstracts the internal service decomposition from the Vue.js frontend and enables per-service independent scaling. However, it also introduces additional configuration complexity — a quantifiable dimension in the operational complexity criterion of this study's comparison framework.
+
+
+\subsection{Docker and Containerization}
+Docker is used to containerize all architectural implementations, ensuring consistent deployment environments and enabling fair performance comparisons. Each architecture is packaged as a Docker Compose configuration specifying the required services, database instances, and network topology.
+
+For the Monolithic architecture, a single application container is defined alongside a database container.
+For the Microservices architecture, individual containers are defined per service, along with a shared API Gateway 
+container and service-specific database containers. This configuration difference itself constitutes a measurable
+dimension of operational complexity in the comparative evaluation.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/Docker.png}
+    \caption{Docker: Handling service containerization for microservice (for example)}
+    \label{fig:reverse-proxy}
+\end{figure}
+
+
 
 \section{Summary}
 

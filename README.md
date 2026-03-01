@@ -155,20 +155,11 @@ khi code của mình là đã khác bọt nhiều lắm rồi.
 
 Đầu tiên là phải xóa đi bằng lệnh
 
-    latexmk -c
+    latexmk -C
 
 Sau đó build lại:
     
-    latexmk
-
-Hoặc cụ thể hơn trong trường hợp của mình thì mình copy paste thằng 4 cái lệnh sau:
-
-    xelatex main.tex
-    bibtex main
-    xelatex main.tex
-    xelatex main.tex
-
----
+    latexmk -xelatex -f main.tex
 
 
 ## Lời kết
