@@ -1,22 +1,49 @@
 \chapter{Literature Review}
-This chapter provides a comprehensive review of existing literature, relevant technologies, and theoretical foundations that underpin the design and evaluation of software architectures in the context of Learning Management Systems (LMS). By synthesizing insights from prior research and established architectural principles, this chapter establishes the conceptual framework used in subsequent experimental chapters.
+This chapter provides a comprehensive review of existing literature, relevant technologies, 
+and theoretical foundations that underpin the design and evaluation of software architectures in the context 
+of Learning Management Systems (LMS). By synthesizing insights from prior research and established architectural 
+principles, this chapter establishes the conceptual framework used in subsequent experimental chapters.
 
-This chapter provides a comprehensive review of existing literature, relevant technologies, and theoretical foundations that underpin the design and evaluation of software architectures in the context of Learning Management Systems (LMS). By synthesizing insights from prior research and established architectural principles, this chapter establishes the conceptual framework used in subsequent experimental chapters.
+This chapter provides a comprehensive review of existing literature, relevant technologies, and theoretical 
+foundations that underpin the design and evaluation of software architectures in the context of Learning 
+Management Systems (LMS). By synthesizing insights from prior research and established architectural principles, 
+this chapter establishes the conceptual framework used in subsequent experimental chapters.
 
 \section{Related Works}
-The relationship between software architecture selection and system quality has been a recurring subject in both academia and industry. A growing body of work examines how architectural choices affect maintainability, scalability, and the cost of change — the three dimensions most relevant to this study.
+The relationship between software architecture selection and system quality has been a recurring 
+subject in both academia and industry. A growing body of work examines how architectural choices affect 
+maintainability, scalability, and the cost of change — the three dimensions most relevant to this study.
 =======
 \subsection{Existing Learning Management System Implementations}
 
-Learning Management Systems have traditionally been implemented as monolithic applications due to their relative simplicity and low initial infrastructure cost. Early open-source platforms such as Moodle and Blackboard exemplify this approach, bundling authentication, course management, content delivery, and assessment into a single deployable unit. While this architectural choice accelerates initial development, it introduces well-documented challenges as the system matures: tightly coupled modules hinder independent deployment, and a fault in one subsystem can cascade across the entire platform.
+Learning Management Systems have traditionally been implemented as monolithic applications due to 
+their relative simplicity and low initial infrastructure cost. Early open-source platforms such as Moodle 
+and Blackboard exemplify this approach, bundling authentication, course management, content delivery, and 
+assessment into a single deployable unit. While this architectural choice accelerates initial development, 
+it introduces well-documented challenges as the system matures: tightly coupled modules hinder independent 
+deployment, and a fault in one subsystem can cascade across the entire platform.
 
-More recent commercial LMS platforms, notably Canvas and Google Classroom, have progressively migrated toward service-oriented. These migrations, often documented as engineering case studies, highlight a common pattern: monolithic systems accumulate technical debt at a rate proportional to team size and feature velocity, eventually motivating architectural refactoring. Dinh (2023) describes the design and implementation of an e-learning system and identifies modular decomposition as a prerequisite for long-term maintainability, noting that systems designed without clear module boundaries suffer disproportionate rework costs when requirements evolve [1].
+More recent commercial LMS platforms, notably Canvas and Google Classroom, have progressively migrated toward 
+service-oriented. These migrations, often documented as engineering case studies, highlight a common pattern: 
+monolithic systems accumulate technical debt at a rate proportional to team size and feature velocity, eventually 
+motivating architectural refactoring. Dinh (2023) describes the design and implementation of an e-learning system 
+and identifies modular decomposition as a prerequisite for long-term maintainability \cite{nguyen_van_dinh_2023}. 
+This observation is further reinforced by Tapia et al. (2020), who argue that the traditional monolithic 
+architecture no longer meets the demands of modern scalable systems. \cite{tapia2020}. Nevertheless, 
+Tapia themselves acknowledge that a monolithic codebase may be more efficient and carry 
+less overhead for smaller-scale applications, and that migrating to a microservices design does not 
+guarantee benefits for all organizations. This view is echoed by Niemelä and Hyyrö (2019), who caution 
+that microservice architecture will provide neither a single point of failure nor easy logging, and that 
+service orchestration is in fact quite complex, with poorly informed changes potentially causing 
+discontinuities in service provision \cite{Pia_Niemelä}. Taken together, these perspectives suggest that the choice 
+between monolithic and microservice architecture should be driven by the specific scale, complexity, 
+and operational context of the system under development, rather than by architectural fashion alone.
 
 \subsection{Comparative Studies on Software Architectures}
 
 The comparative evaluation of Monolithic and Microservices architectures has attracted significant research attention. Xu (2025)
 provides a widely referenced comparative overview, arguing that each architectural style occupies a distinct position on the 
-spectrum between simplicity and operational flexibility [2]. The study concludes that no single architecture universally outperforms 
+spectrum between simplicity and operational flexibility \cite{Alex_xu_2025}. The study concludes that no single architecture universally outperforms 
 the others; rather, the appropriate choice is contingent on team size, system scale, and expected rate of change.
 
 Empirical studies applying scenario-based evaluation — a methodology where predefined change scenarios are applied to each 
