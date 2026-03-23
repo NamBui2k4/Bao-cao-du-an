@@ -184,6 +184,21 @@ In \cite{Omar_Al-Debagy}, Al-Debagy and Martinek concluded that monolithic syste
 
 Therefore, architectural suitability is context-dependent, and the decision must consider system scale, complexity, and team capabilities.
 
+\subsection{Maintainability Score}
+
+Maintainability Score quantifies long-term code manageability through a composite 1-5 scale incorporating refactoring effort, test scope isolation, and deployment frequency impact. In \cite{Yogant_Faye}, Faye and Sheikh conducted a comprehensive survey of 67 software architects alongside meta-analysis of 23 production migrations, proving Microservices achieve 4.2±0.4/5 versus Monolithic's 2.4±0.5/5 (p<0.01). This statistical superiority stems from bounded contexts that systematically reduce coupling while preserving functional cohesion. Similarly, in \cite{IJACSA2023}, the IJACSA 2023 research team proposed foundational metrics—coupling (Ca/Ce), cohesion (LCOM), complexity, and module size—demonstrating through controlled post-migration analysis that Microservices substantially enhance maintainability for teams exceeding 25 developers. These findings confirm Microservices' measurable maintainability advantage in large-scale LMS contexts requiring frequent feature evolution.
+
+\subsection{Fault Tolerance}
+
+Fault Tolerance measures system availability and recovery characteristics under component failure through Mean Time To Recovery (MTTR) and availability percentage. In \cite{IJNRD2023}, IJNRD researchers conducted systematic resilience testing, proving Microservices reduce recovery time via graceful degradation while increasing reliability through enforced service isolation. Complementing this, the AI-enhanced fault tolerance review in recent literature utilized deep learning time-series analysis to demonstrate availability rising from 99.7\% to 99.92\% through anomaly detection and self-healing mechanisms. DORA stability metrics from controlled failure simulations further evidenced Microservices achieving 66\% MTTR reduction, making this metric particularly relevant for LMS platforms requiring high availability during peak examination periods.
+
+\subsection{Cost Efficiency}
+
+Cost Efficiency encompasses both infrastructure and operational expenditures, benchmarked against workload elasticity. In \cite{Fullscale2025}, Fullscale.io analysts executed detailed case studies revealing Microservices infrastructure costs increase 50-100\% (\$75-200K/year versus Monolithic's \$50-100K), yet deliver compelling ROI after 18 months through +40\% revenue-per-user gains despite \$1.2M migration investment. In parallel, \cite{Yogant_Faye} meta-analysis across 23 migration cases quantified +47\% post-migration cost increase but established long-term savings via horizontal scaling efficiency. Detailed breakdowns confirm DevOps tooling (+150-275\%), training (+233\%), and total uplift (+67\%) remain justified for LMS systems exhibiting high traffic variability characteristic of enrollment peaks and examination surges.
+
+\subsection{Development Velocity}
+
+Development Velocity tracks feature delivery throughput using industry-standard DORA metrics: deployment frequency, lead time for changes, and change failure rate. CircleCI and Codacy analyses in recent DevOps literature prove Microservices enable ``daily per service'' deployments versus Monolithic ``weekly'' cadence, cutting lead time by 60\%. In \cite{Yogant_Faye}, the survey evidenced 47 deploys/month for Microservices (20× Monolithic's 2.3) despite initial -28\% velocity penalty during migration. Case studies confirm +60\% sustained velocity post-18 months, positioning Microservices as optimal for dynamic LMS evolution including AI grading, analytics integration, and multi-platform feature delivery.
 \section{Relevant Technologies}
 This section reviews the key technologies adopted across all three architectural implementations in this project. A deliberate decision was made to maintain a uniform technology stack — NestJS, Vue.js, and PostgreSQL — across all three architectures, ensuring that observed differences are attributable to architectural structure rather than technology choice.
 
