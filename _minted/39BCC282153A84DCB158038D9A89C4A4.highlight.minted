@@ -1,0 +1,22 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+    services/
+    ├── assessment\PYGZhy{}service/
+    │   ├── src/
+    │   │   ├── entity/
+    │   │   │   └── assignment.entity.ts  ← update id field type (5)
+    │   │   ├── repository/
+    │   │   │   └── assignment.repository.ts  ← update query (4)
+    │   │   ├── service/
+    │   │   │   └── assignment.service.ts  ← update logic (3)
+    │   │   └── controller/
+    │   │       └── assignment.controller.ts  ← update DTO (2)
+    │   └── prisma/
+    │       └── schema.prisma  ← alter id column type (1)
+    ├── progress\PYGZhy{}service/
+    │   └── src/
+    │       ├── controller/
+    │       │    └── progress.controller.ts ← update message contract only (6)
+    │       ├── ....
+    │       │
+    │       ├── ....   // other 5 modules. With total 11 modules
+\end{MintedVerbatim}

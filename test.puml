@@ -1,0 +1,62 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenRod
+}
+skinparam actor {
+  BackgroundColor Gold
+  BorderColor DarkGoldenRod
+}
+
+' Define Actors '
+actor "User" as User
+actor "Admin" as Admin
+actor "Instructor" as Instructor
+actor "Department Head \n (Reviewer)" as Reviewer
+
+' Inheritance relationships '
+Admin -up-|> User
+Instructor -up-|> User
+Reviewer -up-|> Instructor
+
+rectangle "Subjects & Assignment Subsystem" {
+  
+  ' Personal Profile function group '
+  usecase "View Personal Profile" as UC21
+  usecase "Update Personal Information" as UC22
+  
+  ' Student Management function group '
+  usecase "View Student List" as UC23
+  usecase "Add Student to Course" as UC24
+  usecase "Remove Student from Course" as UC25
+  
+  ' Instructor Management function group '
+  usecase "View Instructor List" as UC26
+  usecase "Assign Instructor to Course" as UC27
+  usecase "Update Qualifications/Expertise" as UC28
+  usecase "Teaching Activity Statistics" as UC29
+}
+
+' ================= Actor Permissions ================= '
+
+' User permissions (Students are also Users) '
+User -- UC21
+User -- UC22
+
+' Instructor permissions '
+Instructor -- UC23
+Instructor -- UC24
+Instructor -- UC25
+Instructor -- UC28
+
+' Department Head permissions '
+Reviewer -- UC26
+Reviewer -- UC27
+Reviewer -- UC29
+
+' Admin permissions '
+Admin -- UC26
+
+@enduml

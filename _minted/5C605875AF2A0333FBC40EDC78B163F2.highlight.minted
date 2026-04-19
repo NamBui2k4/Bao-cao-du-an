@@ -1,0 +1,17 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+    src/
+    ├── controller/
+    │      ├── progress.controller.ts
+    │      └── assignment.controller.ts
+    ├── service/
+    │      ├── progress.service.ts
+    │      └── assignment.service.ts
+    ├── repository/
+    │      ├── progress.repository.ts
+    │      └── assignment.repository.ts
+    ├── entity/
+    │      ├── progress.entity.ts
+    │      └── assignment.entity.ts
+    ├── database/
+    │   └── schema.ts  ← change id type in \PYGZdq{}Assignments\PYGZdq{} table
+\end{MintedVerbatim}

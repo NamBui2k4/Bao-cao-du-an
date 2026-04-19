@@ -1,0 +1,10 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+lms\PYGZhy{}microservices/
+├── services/
+│   ├── auth\PYGZhy{}service/                ← Accounts \PYGZam{} Security (port 3001)
+│   ├── user\PYGZhy{}service/                ← Users \PYGZam{} Assignment (port 3000)
+│   ├── curriculum\PYGZhy{}service/          ← Curriculum \PYGZam{} Instruction
+│   ├── quiz\PYGZhy{}grading\PYGZhy{}service/        ← Learning \PYGZam{} Assessment (scale independently)
+│   └── api\PYGZhy{}gateway/                 ← Frontend gateway or proxy
+└── docker\PYGZhy{}compose.yml
+\end{MintedVerbatim}

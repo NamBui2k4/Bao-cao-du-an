@@ -1,0 +1,15 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+lms\PYGZhy{}monolith/
+├── src/
+│   ├── controllers/
+│   │   ├── auth.js
+│   │   ├── course.js
+│   │   ├── quiz.js           ←  quiz function
+│   │   ├── assignment.js
+│   │   └── ...
+│   ├── services/
+│   ├── models/
+│   └── ...
+├── app.js
+└── server.js
+\end{MintedVerbatim}
