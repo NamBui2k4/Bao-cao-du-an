@@ -1,27 +1,37 @@
-\chapter*{Abstract}
+\chapter{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
 The selection of an appropriate software architecture plays a critical role in the development and 
 evolution of \textbf{Learning Management Systems (LMS)} , directly affecting system scalability, maintainability, 
-and adaptability to changing requirements. This project presents a comparative study of three widely 
-adopted architectural approaches—\textbf{Monolithic}, \textbf{Modular Monolith} , and \textbf{Microservices}—within the context of 
+and adaptability to changing requirements. This project presents a comparative study of two widely 
+adopted architectural approaches—\textbf{Monolithic},  and \textbf{Microservice}—within the context of 
 an LMS application.
 
 A core LMS system was designed with essential functionalities, including user management, course management,
 enrollment, learning content delivery, and assessment handling. Based on the same functional requirements, 
-the system was implemented separately using the three architectural styles to ensure a fair and consistent 
+the system was implemented separately using the two architectural styles to ensure a fair and consistent 
 comparison. Several change and extension scenarios, such as modifying grading logic, adding learning 
 progress statistics, and preparing for future learning analytics integration, were defined and applied
 to each architecture.
 
-The architectures were evaluated using technical criteria including module isolation, 
-change impact scope, scalability at the functional level, deployment and operational complexity, 
-and suitability for different system scales. The experimental results highlight the strengths and 
-limitations of each approach: Monolithic architecture offers simplicity and ease of deployment but
- exhibits limited flexibility when evolving; Modular Monolith improves maintainability through clearer 
- module boundaries while retaining centralized deployment; Microservices provide superior scalability 
- and change isolation at the cost of increased implementation and operational complexity.
-
-This study provides practical insights into the real-world trade-offs of architectural choices and 
-proposes recommendations for selecting suitable architectures for LMS systems of small, medium, and 
-large scales.
+The two architectures were evaluated across four quantitative dimensions: throughput and response time under 
+variable load, CPU resource utilization efficiency (RUE), and development-phase availability derived from 
+commit history analysis. The experimental results reveal a context-dependent performance hierarchy governed 
+by a concurrency crossover threshold at approximately 1,000 Virtual Users. Below this threshold, 
+the Monolithic architecture maintains measurable advantages due to the elimination of inter-service 
+network hops, achieving a response time of 12.8 ms at single-user load compared to 34.1 ms for Microservices. 
+Beyond the threshold, the performance hierarchy inverts: at 2,000 VUs under gradual ramp-up conditions, 
+Microservices achieves 579.17 RPS versus the Monolith's 430.94 RPS — a 34.4\% superiority — and 
+expands to a 63.2\% throughput advantage under simultaneous burst injection at 1,500 VUs. 
+Resource efficiency analysis reveals that at normal operational load (200 VUs), the 
+Microservices architecture delivers a CPU utilization efficiency (RUE\_CPU) of 1,148.09 
+requests per CPU percentage point — approximately 2.0 times higher than the Monolith's 
+573.22 — by processing 4.65 times more requests at comparable CPU expenditure. However, 
+this efficiency advantage inverts under peak stress (1,000 VUs), where the Monolith's RUE\_CPU 
+of 3,109.90 is 4.58 times higher, reflecting the exponential coordination overhead of eight 
+simultaneously saturated containers. Fault tolerance analysis of 148 development-phase commit 
+events demonstrates that the Microservices architecture achieved a system availability of 43.31\% 
+compared to 35.14\% for the Monolith, attributable to its bounded blast-radius property that 
+prevents localized service failures from propagating to unrelated functional domains. 
+These findings provide a data-driven decision framework for selecting LMS architecture 
+based on scale, operational load patterns, and organizational DevOps maturity.

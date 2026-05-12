@@ -162,6 +162,8 @@ Sau đó build lại:
     latexmk -xelatex -f main.tex
 
 
+
+
 ## Lời kết
 
 Mình viết file này để tự hướng dẫn bản thân cũng như người làm cùng nhóm viết báo cáo bằng Latex sao cho ok, có lỗi thì sửa được. 

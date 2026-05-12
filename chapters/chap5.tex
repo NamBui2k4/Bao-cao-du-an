@@ -1,326 +1,455 @@
-\chapter{Development and Testing}
-\label{chap:development}
+% Chương này đề cập đến quá trình đo lường hệ thống lms
+% Bao gồm src code của monolithic và microservice
+% Đây là nơi mình trình bày tất cả những gì mình đã làm trong dự án từ trước tới giờ
+% từ việc triển khai bằng nestjs, docker, nginx, cors, 
 
-\section{Introduction to Development Approach}
-The development approach in this chapter is informed by modern software engineering practices and recent advances in real-time system development \cite{cantelon2017nodejs,tilkov2018nodejs,li2020realtime,blogmicro2023}.
+\chapter{Experimental results and analysis}
 
-\subsection{Overview of the Development Methodology}
-The iterative methodology adopted here is consistent with recommendations from \cite{fowler2015microservices,kleppmann2013designing,rauch2022scalable}.
-\begin{itemize}
-    \item \textbf{Iterative Delivery:} Features are developed in small increments.
-    \item \textbf{Continuous Feedback:} Regular reviews and stakeholder input.
-    \item \textbf{Quality Focus:} Automated tests and code reviews.
-\end{itemize}
-The project adopted a modern, iterative development methodology to ensure rapid delivery of features, continuous feedback, and adaptability to changing requirements. Emphasis was placed on code quality, automation, and collaboration among team members.
+In this chapter, the performance metrics of both Monolithic and Microservice architectures are evaluated 
+through a series of controlled experiments. The goal is to quantify the differences in efficiency, stability, 
+and resource consumption under varying load conditions.
 
-\subsection{Agile Workflow and Iteration Cycles}
-\begin{itemize}
-    \item \textbf{Sprint Planning:} Define goals and tasks for each cycle.
-    \item \textbf{Daily Stand-ups:} Synchronize team progress.
-    \item \textbf{Retrospectives:} Reflect and improve process.
-\end{itemize}
-Development was organized into short sprints, each focused on delivering a set of prioritized features or improvements. Daily stand-ups, sprint planning, and retrospectives were used to maintain alignment and address blockers promptly.
+\section{Analysis of Throughput \& Response Time}
 
-\subsection{Task Management and Version Control Practices}
-\begin{itemize}
-    \item \textbf{Branching Strategy:} Feature, develop, and release branches.
-    \item \textbf{Pull Requests:} Peer review and automated checks.
-    \item \textbf{Issue Tracking:} Use of labels, milestones, and boards.
-\end{itemize}
-Tasks were tracked using GitHub Issues and project boards. All code changes were managed via Git and GitHub, with feature branches, pull requests, and code reviews enforced to maintain code quality and traceability.
+This section evaluates the performance of both Monolithic and Microservice architectures through two primary 
+metrics: Throughput (requests per second, RPS) and Response Time (average latency in milliseconds). Load generation 
+was performed using k6, simulating a complete user journey comprising four sequential 
+API calls — GET /courses, GET /courses/:id, POST /login, and POST /enrollment — with a 1-second 
+think time between cycles. All tests were executed across two distinct scenarios to capture both 
+gradual scaling behavior and peak burst resilience.
 
-\section{Development Environment and Tools}
+\subsection{Scenario 1: Gradual Ramp-Up Load}
 
-\subsection{Programming Languages, Frameworks, and Libraries}
-The choice of programming languages and frameworks is based on their suitability for scalable, event-driven applications, as discussed in \cite{cantelon2017nodejs,brown2019websockets,nodejsdocs,blogkafka2022}.
-\begin{itemize}
-    \item \textbf{Node.js:} Main runtime for backend services.
-    \item \textbf{WebSocket Libraries:} ws, uWebSockets.js, Socket.IO.
-    \item \textbf{Supporting Libraries:} Express, dotenv, Winston, etc.
-\end{itemize}
+In the first scenario, the number of Virtual Users (VUs) was increased incrementally from 1 to 2,000 across twelve discrete levels (1, 5, 10, 15, 20, 50, 100, 200, 500, 1,000, 1,500, and 2,000 VUs), with each level sustained for a fixed duration before advancing. This approach mirrors realistic LMS usage patterns such as the progressive influx of students accessing course materials at the start of a semester.
 
-\subsection{Comparison of WebSocket Libraries}
-Table~\ref{tab:websocket-comparison} compares the main WebSocket libraries considered for this project.
-\begin{table}[H]
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/throughput&response/ramp/throughput.png}
+\caption{Throughput Comparison under Gradual Ramp-Up Load (Scenario 1)}
+\label{fig:throughput_s1}
+\end{figure}
+
+At low and moderate load levels (1–100 VUs), the Monolithic architecture sustains a measurably higher throughput. At 50 VUs, Monolith achieves 48.33 RPS versus 47.00 RPS for Microservice — a modest but consistent advantage attributable to the elimination of inter-service network hops. Internal module communication via direct function calls within a single process incurs zero network latency, whereas every Microservice request must traverse the Nginx API Gateway before reaching the target service.
+
+A critical crossover occurs at approximately 1,000 VUs. At this threshold, Monolith throughput begins to plateau at around 390–435 RPS while Microservice continues to scale, reaching 579.17 RPS at 2,000 VUs compared to 430.94 RPS for Monolith. This reversal reflects a structural bottleneck in the Monolithic architecture: as concurrent connections accumulate, the shared Node.js event loop and single database connection pool become contention points, throttling effective throughput. Microservice, by contrast, distributes request handling across independently-deployed services (Account, Academic, Course), each maintaining its own connection pool and processing queue.
+
+The response time degradation curve for the ramp-up scenario further illuminates the saturation mechanism. At 200 VUs, the Monolith's average response time of 133.4 ms remains within acceptable user experience bounds (typically defined as sub-200 ms for interactive web applications). However, the P99 response time at this load level already exceeds 800 ms — indicating that while the average user experience remains acceptable, a statistically significant minority of requests are experiencing severe queue starvation. This divergence between mean and P99 is a characteristic signature of event-loop saturation in single-threaded Node.js applications: the majority of requests are processed quickly when the event loop is available, but requests that arrive during database I/O wait cycles are queued and incur disproportionate latency.
+
+The Microservice P99 behavior at 200–500 VUs tells a different story. The P99 value of 30,002 ms — effectively the 30-second timeout boundary imposed by the k6 test configuration — indicates that a small but non-trivial proportion of enrollment requests are being dropped entirely rather than served with degraded latency. This behavior reflects the cross-service coordination chain: a POST /enrollment request that arrives at AccountService while the service's connection pool is exhausted will wait for a connection; if the wait exceeds the downstream service timeout, the entire multi-step transaction fails. The architectural implication is that the Microservice write path introduces a failure mode — partial transaction timeout — that is structurally absent in the Monolith, where the entire write operation executes within a single memory space with deterministic connection pool access.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/throughput&response/ramp/response.png}
+\caption{Response Time Comparison under Gradual Ramp-Up Load (Scenario 1)}
+\label{fig:response_s1}
+\end{figure}
+
+Regarding response time, at low concurrency (1–20 VUs), Monolith maintains a significantly lower average response time — 12.8 ms at 1 VU compared to 34.1 ms for Microservice. This gap originates from the serialized inter-service path that each Microservice request must traverse: authentication via Account Service, enrollment validation through Academic Service, and course data retrieval from Course Service. Each network hop and JSON serialization/deserialization cycle contributes cumulative latency that is absent in the Monolithic process model.
+
+However, as load escalates beyond 200 VUs, the performance relationship inverts. At 500 VUs, Monolith average response time reaches 213.2 ms while Microservice experiences severe degradation at 1,296.6 ms — a reflection of queue saturation in the write-heavy enrollment pathway. Notably, at 1,500–2,000 VUs, Microservice stabilizes at 1,205–1,557 ms while Monolith continues to climb to 1,847 ms, confirming that distributed processing capacity ultimately absorbs sustained high-concurrency load more effectively.
+
+\subsection{Scenario 2: Peak Load (Flash Crowd Simulation)}
+
+The second scenario simulates worst-case peak conditions — analogous to hundreds of students simultaneously submitting assignments moments before a deadline — by injecting all VUs simultaneously with zero ramp-up time. Six load levels were tested: 10, 100, 500, 1,000, 1,500, and 2,000 VUs.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/throughput&response/concurrent/throughput.png}
+\caption{Throughput under Simultaneous Peak Load (Scenario 2)}
+\label{fig:throughput_s2}
+\end{figure}
+
+Under burst conditions, the two architectures exhibit dramatically different scaling curves. At 10 VUs, both architectures 
+deliver comparable throughput (Monolith: 19.13 RPS, Microservice: 18.54 RPS), confirming that at minimal load the 
+network overhead of Microservice is not yet consequential. However, as burst load intensifies, Microservice begins 
+to assert a substantial throughput advantage: at 1,000 VUs, Microservice processes 1,694.78 RPS versus 764.29 RPS
+for Monolith. At 1,500 VUs, Microservice reaches 5,318.77 RPS compared to 3,258.60 RPS for Monolith — a 63\% advantage. 
+At peak 2,000 VUs, Microservice achieves 6,593.21 RPS while Monolith delivers 5,548.00 RPS.
+
+This behavior confirms that Microservice' distributed processing model provides superior parallelism under sudden high concurrency. When 2,000 requests arrive simultaneously, the Monolithic single-process event loop queues requests sequentially, whereas Microservice containers handle requests in parallel across multiple isolated processes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/throughput&response/concurrent/response.png}
+\caption{Response Time under Simultaneous Peak Load (Scenario 2)}
+\label{fig:response_s2}
+\end{figure}
+
+The response time data for this scenario reveals a notable pattern reversal compared to Scenario 1. At 10 VUs, Monolith exhibits lower average latency (21.1 ms versus 38.7 ms for Microservice), consistent with the absence of inter-service hops. However, as load escalates to 500 VUs, Microservice response time spikes sharply to approximately 2,089 ms — significantly higher than Monolith's 669.7 ms at the same load level. This spike reflects the compounding effect of inter-service coordination under simultaneous burst pressure: each request must sequentially acquire tokens from Account Service and validate enrollment through Academic Service before completing.
+
+The trajectory reverses dramatically at 1,000 VUs and beyond. Microservice response time 
+falls to 501.3 ms at 1,000 VUs and further to 68.0 ms at 2,000 VUs — a counter-intuitive improvement 
+explained by the system reaching full parallelism saturation, with all service containers actively 
+processing requests simultaneously. Monolith response time at 2,000 VUs remains at 203.7 ms, constrained 
+by the centralized event loop. 
+
+This 30.7-fold improvement in Microservice response time — from 2,089 ms at 500 VUs to 68.0 ms at 2,000 VUs — is not a measurement artifact but reflects the saturation-induced parallelism recovery mechanism characteristic of distributed container architectures. At 500 VUs, the system has accumulated sufficient concurrent requests to saturate the sequential coordination chain (AccountService token validation → AcademicService enrollment verification) but has not yet reached the threshold at which all containers are simultaneously active. This intermediate state produces maximum queue depth and worst-case wait time. As load crosses 1,000 VUs and all service containers enter sustained full utilization, inter-container request queues stabilize and the effective per-request latency converges toward the service's minimum processing time rather than the queue's maximum wait time. The Monolith does not exhibit this recovery behavior because its single event loop has no equivalent parallel saturation mechanism — once the callback queue is full, each additional request increments wait time linearly regardless of total load.
+
+This divergence indicates that under extreme concurrent burst conditions, 
+the Microservice architecture delivers substantially better per-request latency for individual users despite
+ its higher infrastructure overhead.
+
+
+\section{Analysis of CPU Usage}
+
+This section evaluates CPU resource consumption across both architectures using an incremental load methodology adapted from Schlögl et al. (2024). Resource telemetry was captured via docker stats at five-second polling intervals and processed into time-series visualizations. Three test cases are examined, each representing a progressively more demanding operational scenario: read-only access, write-intensive access, and high-concurrency mixed load.
+
+To characterize resource scaling behavior, each architecture was subjected to twelve discrete user load levels (1, 5, 10, 15, 20, 50, 100, 200, 500, 1,000, 1,500, and 2,000 VUs) under ramp-up conditions, with CPU consumption recorded at each level. This approach yields a complete picture of how resource utilization evolves from idle baseline through saturation, enabling precise identification of the load threshold at which architectural differences become operationally significant.
+
+\subsection{Scenario 1: Read-Only Access (GET /courses)}
+This scenario simulates the most common LMS interaction pattern: unauthenticated browsing of the course catalog via GET /courses. This lightweight read scenario isolates baseline infrastructure overhead from business logic processing costs.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc1/cpu_vu.png}
+\caption{Average CPU Usage across Load Levels — TC1 Read-Only (Monolith vs. Microservice)}
+\label{fig:cpu_s1_avg}
+\end{figure}
+
+Analysis of CPU consumption shows a notable behavioral divergence at low load. At 1–15 VUs, both architectures exhibit CPU consumption in the 33–44\% range — however, Microservice demonstrates more volatile fluctuation, peaking at 48\% at 100 VUs before falling back to 36\% at 200–500 VUs, while Monolith sustains a steadier rise from 38\% to 52\% across the same range. At 1,000–2,000 VUs, the trajectories converge and rise in parallel, with Monolith reaching 69.2% and Microservice reaching 63.8% at 2,000 VUs.
+
+The early-stage CPU volatility in Microservice is attributable to RabbitMQ burst activity visible in the per-container timeline: even under a simple GET /courses request, the message broker incurs periodic CPU spikes as it processes heartbeat and topology synchronization frames — overhead entirely absent in the Monolithic process model.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc1/cpu_time_mono.png}
+\caption{CPU Usage Timeline — Monolith, 1 VU (Read-Only)}
+\label{fig:cpu_s1_mono}
+\end{figure}
+
+In the Monolithic timeline, CPU consumption follows a "burst-and-rest" pattern, where the container spikes during request processing and returns to near 0\% during idle periods. The total host CPU consumption (host\_total) ranges between 40\% and 90\%, indicating that at low loads, the application's actual resource footprint is negligible compared to the background noise of the operating system and Docker engine.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc1/cpu_time_micro.png}
+\caption{CPU Usage Timeline — Microservice, 1 VU (Read-Only)}
+\label{fig:cpu_s1_micro}
+\end{figure}
+
+In contrast, Microservice reveal the structural overhead of a distributed architecture. The RabbitMQ container consumes a consistent 40–60\% CPU even when idle due to the Erlang VM's constant polling and scheduling mechanisms. Other service containers also maintain higher baseline activity to manage connection pools and health checks. This "infrastructure tax" confirms that Microservice require a significant minimum resource threshold regardless of actual application load.
+
+\subsection{Scenario 2: Write-Intensive Access (POST /profile)}
+This scenario introduces database write operations via POST /profile, which requires input validation, database record creation, and response serialization. This scenario examines how each architecture handles CPU pressure from concurrent write workloads.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc2/cpu_vu.png}
+\caption{Average CPU Usage across Load Levels — TC2 Write-Intensive (Monolith vs. Microservice)}
+\label{fig:cpu_s2_avg}
+\end{figure}
+
+Monolith CPU climbs steeply from 40.5\% at 1 VU to a peak of 69.2\% at 2,000 VUs, following a consistent upward trajectory. The Microservice curve, however, displays a pronounced dip to 36.4\% at 200–500 VUs before recovering to 63.8\% at 2,000 VUs. This dip reflects the write timeout behavior observed in the raw data: at 200–500 VUs, Microservice write requests begin timing out at 30 seconds, drastically reducing the effective number of active requests being processed and thus suppressing measured CPU consumption despite the high user count.
+
+This finding has important implications: the Microservice write path under ramp conditions suffers from cross-service coordination overhead that causes response time to exceed 30 seconds at 200–500 VUs (p99 = 30,002 ms), indicating that the distributed transaction across Account Service and Academic Service creates a cascading latency chain under moderate sustained write load. Monolith, processing all write operations within a single memory space, avoids this coordination cost.
+
+\subsection{Scenario 3: Mixed Concurrent Load}
+
+The final scenario represents the most demanding scenario: 2,000 VUs injected simultaneously with 
+a mixed workload combining GET /courses, GET /profile, POST /profile, and POST /enrollment requests. 
+The objective is to observe CPU behavior at the system's operational ceiling and identify 
+architectural resilience characteristics.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc3/cpu_vu.png}
+\caption{Average CPU Usage across Load Levels — TC3 Mixed Concurrent Load (Monolith vs. Microservice)}
+\label{fig:cpu_s3_vu}
+\end{figure}
+
+Analysis of aggregate CPU levels shows that, under mixed load, Microservice always maintains higher aggregate 
+CPU than Monolithic at all load levels. At 100 VU, Microservice reached 54.4\% compared to 36.0\% for 
+Monolith. At 1,000 VU, the gap widens further: Microservice is at 74.0\% compared to Monolith's 48.7\%. At 1,500 VU, Microservice 
+peaked at 88.1\% while Monolith reached 62.9\%. The two architectures converge somewhat at 2,000 VU — 
+Microservice at 84.5\% and Monolith at 72.4\% — as both systems approach resource saturation
+
+
+Critically, the higher aggregate CPU cost of Microservice under mixed 
+load does not translate into a performance penalty. At 2,000 VUs, 
+Microservice delivers 6,593 RPS versus 5,548 RPS for the Monolith — 
+a 19.0\% throughput advantage — while simultaneously maintaining a 
+substantially lower average response time (68 ms versus 204 ms). This 
+counter-intuitive result — greater CPU expenditure yielding superior 
+throughput and lower latency — is explained by the architecture's 
+distributed concurrency model: multiple containers process read and 
+write requests in parallel across isolated pipelines, whereas the 
+Monolith serializes all request types through a single event loop. The 
+defining trade-off of Microservice at scale is therefore not raw CPU 
+economy but output per unit of CPU consumed, as quantified by the 
+RUE\_CPU analysis in Section 6.4.
+
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc3/cpu_time_mono.png}
+\caption{CPU Usage Timeline — Monolith, 2,000 VUs (Mixed Load)}
+\label{fig:cpu_s3_mono}
+\end{figure}
+
+At 2,000 VUs, the Monolith reaches full saturation with the backend container consuming 130–185\% CPU. Because there is no resource isolation, all read and write requests compete for the same single-process resources, creating a global bottleneck. A surge in heavy write tasks directly degrades the response time of concurrent read tasks. This lack of resource partitioning is a fundamental architectural limit that prevents the Monolith from scaling throughput further even if host resources are available.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cpu_usage/tc3/cpu_time_micro.png}
+\caption{CPU Usage Timeline — Microservice, 2,000 VUs (Mixed Load)}
+\label{fig:cpu_s3_micro}
+\end{figure}
+
+The Microservice architecture presents a drastically different picture characterized 
+by clear resource differentiation. While the Account Service and RabbitMQ absorb the 
+brunt of the write workload with spikes up to 200–540\%, the Course Service and API 
+Gateway remain stable at very low levels (under 25\%). This isolation ensures that users 
+browsing courses remain completely unaffected by the saturation of enrollment services. 
+By localizing saturation to specific services, Microservice prevent system-wide failure 
+and maintain a consistent user experience across unrelated functional domains. This fault 
+and resource isolation is the most significant operational advantage of Microservice for
+LMS platforms with uneven load distributions.
+
+\section{Fault Tolerance Analysis}
+This section evaluates the structural resilience of both architectures by analyzing their behavior during the development and integration lifecycle. By utilizing empirical data from the project's commit history, the analysis moves beyond theoretical availability formulas to examine how the "Blast Radius" of common configuration and deployment errors differs between a unified monolithic core and a decoupled Microservice ecosystem. This practical investigation provides a granular look at the trade-off between configuration complexity and system-level robustness.
+
+The commit data we recorded from April 2nd 2026 to May 6th 2026, which is contained in two .xlsx file  of \texttt{commit\_history/}. One of them belongs to microservice log and the other belongs to monolithic. Each file shows a clear difference in the scope of impact when errors occur. 
+Specifically, in monolithic systems, errors such as "missing dist folder" (April 29) or "Incorrect build context" resulted in a full-blown fail. The entire system failed to launch due to the tight dependency on a single Dockerfile. Meanwhile, Microservice exhibited
+configuration errors such as "incorrect path matching" at Nginx (May 1) and only caused localized failures for a specific service. History shows that other services (such as AccountService) 
+remained healthy and functioned normally, demonstrating the ability to isolate the risk. Additionally, history records several commits related to RabbitMQ tweaks. However, these issues did not cause a chain reaction of failures. The separation of the database helps Microservice avoid the widespread database connection timeout errors often seen in Monolithic 
+architectures when a module consumes all connection pool resources.
+
+In our experience, team assign $t^{limit}=2 \ hours = 7200 \ second$. This interval is the 
+shortest and most ideal time period for exception operations not related to system development
+
+\begin{figure}[H]
     \centering
-    \caption{Comparison of WebSocket Libraries}
-    \label{tab:websocket-comparison}
-    \begin{tabularx}{\textwidth}{l c X X}
-        \toprule
-        \textbf{Library} & \textbf{Performance} & \textbf{Feature Set} & \textbf{Ease of Use} \\
-        \midrule
-        ws & High & Basic WebSocket functionality with minimal protocol overhead & Simple low-level API suitable for custom implementations \\
-        uWebSockets.js & Very High & Advanced HTTP and WebSocket support implemented on a C++ core & More complex API but delivers the highest performance \\
-        Socket.IO & Moderate & Rich feature set including rooms, fallback transports, and events & High-level abstraction that is easy to use but less efficient \\
-        \bottomrule
-    \end{tabularx}
+    \includegraphics[width=0.8\textwidth]{images/my-demo/charts/tolerance/development_microservice_stats.png}
+    \caption{Performance Statistics — Microservice Architecture}
+    \label{fig:response time of microservice in first scenario}
+\end{figure}
+
+Although Microservice have a higher number of failed commits, their tolerance is better than monolithic, 
+as shown by the availability index. Thanks to independent encapsulation, errors are localized. The system 
+accepts the failure of a small service to protect the overall availability.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/my-demo/charts/tolerance/development_monolithic_stats.png}
+    \caption{Development-Phase Fault Tolerance Statistics — Microservices Architecture}
+    \label{fig:response time of monolithic in first scenario}
+\end{figure}
+
+The evaluation of fault tolerance in this study is further enriched by an analysis of the 
+development phase, reflecting the practical experiences of the developers. This analysis is 
+grounded in the commit history 
+recorded in microservice\_commit\_history.xlsx and monolithic\_commit\_history.xlsx, which document events, error codes, locations of occurrence, and the underlying causes of failures encountered during the implementation of both architectures.
+
+A critical observation regarding fault isolation emerges when examining the scope of impact for various errors. In the Monolithic architecture, specific events such as a \textit{"missing dist folder"} or an \textit{"incorrect build context"} (e.g., recorded at 20:43:22 on April 29) caused the entire build and deployment process to collapse. Because the Monolith exists as a single unified unit, a flaw in the \texttt{Dockerfile} or a missing library in \texttt{package.json} paralyzes all functionalities, from authentication to course management. Conversely, the Microservice architecture demonstrated superior operational tolerance. For instance, an \textit{"incorrect path matching"} error at the Nginx gateway (occurring at 09:44:14 on May 01) only resulted in a localized failure for the Academic service endpoints. Other components, such as the \texttt{AccountService}, remained fully functional and were successfully deployed as evidenced by previous stable commits. This confirms that in a Microservice ecosystem, a mistake in one module does not necessarily cripple the entire deployment of other independent modules.
+
+However, the recovery process introduces a different perspective on complexity. Based on the calculated Mean Time to Recovery (MTTR), the Microservice architecture exhibited significant delays between failure detection and resolution. A notable example involved a 40-minute struggle to fix incorrect port mappings and frontend-gateway paths. The challenge of managing numerous ports and inter-service routes in a massive \texttt{docker-compose} environment proved to be a significant hurdle for the team. The debugging process becomes inherently slower when navigating the distributed nature of the system. In contrast, the Monolithic architecture, which lacks such granular division of ports and paths, proved to be much easier to debug, leading to the conclusion that while Microservice are more resilient, Monoliths are more maintainable during the initial debugging phases.
+
+Infrastructure resilience also showed distinct patterns between the two architectures. During the development of the Microservice version, the team experienced a "trial and error" phase where services frequently fluctuated between \textit{healthy} and \textit{unhealthy} states. Crucially, once a service like the \texttt{AccountService} reached long-term stability, it became an independent anchor, allowing developers to modify other services like \texttt{CourseService} without any risk of side effects. This independence was absent in the Monolithic version, where shared resources like the database meant that a local error often escalated into a global system failure, frequently observed in Docker logs as repetitive database or build errors.
+
+While it may seem contradictory that Microservice had a higher number of failed commits despite being more "stable," this was primarily due to human error rather than architectural flaws. Many failures resulted from simple typos in Nginx or RabbitMQ configurations that, due to the distributed nature of the system, took considerable time to trace—sometimes up to 20 minutes—using Docker logs and health checks. Ultimately, the 148 recorded commits suggest that while the Monolithic architecture is simpler to configure, its failures are total and comprehensive. Microservice, despite requiring more configuration effort, provide the essential advantage of partial operation, minimizing the "blast radius" of errors during the development lifecycle.
+
+Therefore, the Microservice architecture demonstrates superior tolerance by converting system crashes into partial failures, 
+thereby ensuring the system's robustness throughout development and actual operation.
+
+\section{Cost Efficiency Analysis}
+
+This section evaluates the economic and operational viability of each architecture by analyzing the relationship between hardware expenditure and successful request throughput. By applying the Resource Utilization Efficiency (RUE) framework, the analysis shifts from raw performance metrics to a "Performance-to-Cost" perspective, identifying the specific workload thresholds where each architectural model becomes the more financially sustainable choice for an LMS deployment.
+
+The Resource Utilization Efficiency (RUE) is a critical metric in this study, as it defines the economic and operational feasibility of each architecture. Based on the telemetry captured during the 2,000 VU stress tests, the following analytical points clarify the performance-to-resource ratio.
+
+
+% --- PHẦN COMMENT GIẢI THÍCH CHIẾN LƯỢC SO SÁNH ---
+% So sánh Cost Efficiency (Hiệu quả chi phí) không phải xem ai "ngốn" ít hơn, 
+% mà là tính toán: "Với 1 đơn vị tài nguyên (CPU/RAM), kiến trúc nào 'vắt' ra được 
+% nhiều Request thành công hơn?". Ở giai đoạn này, 
+% nhóm lại một lần nữa đo lường lại các số liệu của hệ thống khi điều chỉnh tải 
+% (bao gồm mức cpu và ram) ở 2 kịch bản đơn giản hơn các tiêu chí trước
+% Kết hợp với việc tính Chỉ số RUE để xác định xem kiến trúc nào thực sự tiết kiệm chi phí hơn.
+% Về cách thức đo lường thì không có quá nhiều khác biệt với các tiêu chí trước, tuy nhiên
+% biểu đồ sẽ thể hiện thông số tổng thể của toàn bộ một kiến trúc thay vì thông số chi tiết từng container
+% bởi vì số liệu tổng thể này là tiền đề tính ra chi phí tổng thể
+
+%  kịch bản 1: Normal loading
+% biểu đồ cho thấy về phần bộ nhớ bổ sung, Microservice thể hiện hiệu quả hơn, sử dụng 
+% khoảng 440 MiB. Trong khi Monolithic yêu cầu nhiều bộ nhớ hơn (khoảng 470 MiB trong 
+% suốt quá trình thử nghiệm). Điều này là do Microservice đã phân tách các dịch vụ thành các 
+% container chuyên dụng, cho phép hệ thống tránh tình trạng sử dụng bộ nhớ "cồng quản" của Monolithic. 
+% Về nhu cầu CPU, mặc dù đường biểu diễn của Monolithic (màu cam) duy trì mức tiêu thụ trung bình 
+% thấp hơn so với Microservice (màu xanh), nhưng lại thiếu đi sự ổn định cần thiết. Các
+%  đỉnh nhọn (spikes) bất thường trên biểu đồ Monolithic cho thấy kiến trúc này dễ bị tác 
+% động bởi các tiến trình ngầm và cơ chế dọn dẹp bộ nhớ (Garbage Collection). Ngược lại, 
+% Microservice dù có mức CPU cao hơn do phải quản lý 8 container, nhưng biên độ dao động cực kỳ ổn định
+% kết quả tính RUE
+% --- KẾT QUẢ ĐO LƯỜNG THỰC TẾ CỦA KỊCH BẢN NORMAL LOADING---
+% Microservice: Xử lý 59600 req | CPU tb: 51.91% | RUE_CPU: 1148.09
+% Monolithic:    Xử lý 12802 req | CPU tb: 22.33% | RUE_CPU: 573.22
+
+% Kết quả tính toàn này là hoàn toàn hợp lý vì Monolithic mặc dù có mức tiêu thụ CPU 
+% thấp hơn (22.33%) nhưng nó chỉ xử lý được 12,802 requests. Trong khi đó, Microservice xử lý
+%  tới 59,600 requests - gấp 4.65 lần so với Monolithic trong cùng một điều kiện thời gian.
+% Kết luận: microservice tiết kiệm chi phí hơn
+
+%  kịch bản 2: Peak loading
+%  Trong kịch bản này, hệ thống được đặt dưới tải đỉnh là 1.000 người dùng ảo (VU) 
+%  để xác định giới hạn hiệu năng. Như minh họa trong, Microservice biến động mạnh 
+%  với các đỉnh từ 400% đến 600% - cần một lượng lớn % CPU 
+%  để run 8 container khác nhau. Ngược lại, Monolithic (đường màu cam) đã thể 
+%  duy trì mức CPU rất ổn định ở mức dưới 150% trong suốt thời gian thử nghiệm.
+%  Về bộ nhớ, Microservice tốn ít bộ nhớ hơn, dao động quanh mức 500 MiB.
+%  Hệ thống kiến ​​trúc Monolithic yêu cầu nhiều bộ nhớ hơn, nằm trong khoảng 600 - 700 MiB. 
+%  Tuy nhiên, lợi thế này của Microservice không hẳn là tốt khi xét về xử lý request.
+%  Nhóm chúng tôi đã thu thập được dữ liệu sau cho kịch bản Tải cao điểm:
+
+% --- KẾT QUẢ ĐO LƯỜNG THỰC TẾ CỦA KỊCH BẢN PEAK LOADING---
+% Microservice: Xử lý 266469 req | CPU tb: 392.15% | RUE_CPU: 679.51
+% Monolithic:    Xử lý 296562 req | CPU tb: 95.36% | RUE_CPU: 3109.90
+
+%  Trong tình huống tải cao này, monolithic mạnh hơn vì 
+% chỉ số RUE_CPU là 3109.90 — cao hơn khoảng 4,58 lần so với 
+% kiến ​​trúc Microservice (679,51), chứng minh rằng  monolithic có thể xử lý nhiều hơn (296.562 yêu cầu) 
+% chỉ với một phần nhỏ sức mạnh CPU. Điều này có thể được giải thích là do kiến 
+% ​​trúc Monolithic loại bỏ cơ chế gửi thông điệp phức tạp giữa các service, 
+% và một lời gọi hàm ngắn gọn thôi cũng đã đủ đạt được hiệu suất xử lý. 
+% Kết luận, đôi khi lưu lượng truy cập tăng đột biến, kiến ​​trúc Monolithic 
+% vẫn là lựa chọn tiết kiệm chi phí và đáng tin cậy hơn.
+ 
+The testing environment was strictly controlled to eliminate background 
+processes that could interfere with resource consumption.
+We utilize \textbf{k6} to simulate user traffic across three scenarios:
+
+\begin{itemize}
+
+    \item \textbf{Idle load:}  This is the simplest scenario, the architectures do not handle any requests for 5 minutes. 
+    In this scenario, we are only interested in the cost that an architecture must pay to stay ready.
+
+    \item \textbf{Normal Load:} Simulating 200 Virtual Users (VUs) sending continuous requests 
+    to the \textbf{/api/v1/health} endpoint for 5 minutes to determine standard operational costs.
+
+    \item \textbf{Peak Load:} Stressing the system with 1000 VUs to observe 
+    resource isolation and maximum capacity limits.
+\end{itemize}
+
+Also, the \texttt{docker stats} command and automated scripts captured the 
+average resource consumption during each interval.
+
+\subsubsection{\textbf{Idle Load (Cost of Readiness)}}
+
+The Idle Load scenario represents the baseline cost that each architecture must incur to remain operational and ready to serve requests, even when no user traffic is present. This is also known as ``Cost of Readiness'' or ``Static Cost'' -- an important aspect in cost-efficiency analysis because cloud providers charge for resources regardless of actual utilization.
+
+In this scenario, both architectures ran for 5 minutes without any incoming requests. We measured only the background resource consumption required to keep all containers and services in a healthy, ready state.
+
+As shown in Table \ref{tab:resource_summary_idle}, the results reveal a notable difference in baseline memory footprint:
+
+\begin{table}[h]
+\centering
+\caption{Baseline Resource Consumption under Idle Load}
+\label{tab:resource_summary_idle}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Architecture} & \textbf{Avg CPU (\%)} & \textbf{Avg RAM (MiB)} \\ \hline
+Microservice         & 1.35\%                & 326.55                 \\ \hline
+Monolithic            & 1.54\%                & 433.64                 \\ \hline
+\end{tabular}
 \end{table}
-\textbf{Library selection:} \texttt{ws} was chosen for its balance of performance, simplicity, and ecosystem support. \texttt{uWebSockets.js} offers the highest performance but is less mature and harder to debug. \texttt{Socket.IO} provides many features but adds protocol overhead and is less efficient for raw real-time messaging.
 
+The Microservice architecture demonstrates superior cost efficiency in the idle state, consuming approximately \textbf{25\% less RAM} (326.55 MiB compared to 433.64 MiB of the Monolithic architecture). This advantage comes from the modular design where each service runs in a lightweight Alpine-based container and only loads necessary dependencies. In contrast, the monolithic application must load the entire codebase, all modules, and libraries into memory from startup, resulting in a higher baseline memory footprint.
 
-\subsection{Development Environment Setup}
-\begin{figure}[H]
-    \centering
-    % Replace with your environment setup diagram
-    \includegraphics[width=0.7\textwidth]{images/dev-env.png}
-    \caption{Local development environment setup.}
-    \label{fig:dev-env}
+This finding challenges the common assumption that Microservice always consume more resources due to multiple containers. In reality, with proper optimization (such as using Alpine Linux images and minimal service footprints), Microservice can achieve better ``Cost of Readiness'' than a monolithic application.
+
+Since there are no processed requests in the Idle scenario (\(N = 0\)), the traditional RUE formula cannot be applied. Instead, we evaluate efficiency through direct comparison of baseline resource consumption, highlighting the static cost each architecture must pay to maintain system availability.
+
+\subsubsection{\textbf{Normal Load:}}
+
+The experiment under a normal load of 200 VUs reveals a clear trade-off between 
+CPU stability and Memory efficiency. As illustrated in 
+Figure \ref{fig:test_load_analysis}, the \textbf{Microservice} a
+rchitecture (blue line) demonstrates superior stability in 
+CPU usage, maintaining a steady profile around 25\% - 30\% without significant spikes. 
+In contrast, the \textbf{Monolithic} architecture (orange line), while having a 
+slightly lower average baseline, exhibits high volatility with sharp spikes reaching over 70\% CPU utilization.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cost_efficient/production/test_load.png}
+\caption{Resource consumption comparison under Normal Load (200 VUs)}
+\label{fig:test_load_analysis}
 \end{figure}
-A local development stack was provisioned using Docker Compose, enabling rapid onboarding and consistent environments. Environment variables and runtime configuration files were used to manage secrets and deployment-specific settings.
 
-\subsection{Supporting Tools}
-A suite of supporting tools was used to streamline development:
-\begin{itemize}
-    \item \textbf{Git/GitHub:} Source control and collaboration
-    \item \textbf{Postman / Insomnia:} API testing and documentation
-    \item \textbf{Docker / Docker Compose:} Containerized development and deployment
-    \item \textbf{ESLint, Prettier:} Code linting and formatting
-\end{itemize}
+In terms of memory allocation, \textbf{Microservice} proved to be more efficient, utilizing 
+approximately 440 MiB. While Monolithic requires more memory (around 470 MiB throughout the test). 
+This is because Microservice separated services into dedicated containers, allowing the system to 
+avoid the "hungry" memory usage issues of Monolithic. In terms of CPU demand, although the Monolithic 
+curve (orange) maintained a lower average consumption than Microservice (blue), it lacked the 
+necessary stability. The unusual spikes on the Monolithic graph indicate that this architecture 
+is susceptible to background processes and garbage collection mechanisms. Conversely, Microservice, 
+despite having a higher CPU usage due to managing 8 containers, exhibited extremely stable fluctuations.
 
-\section{Source Code Structure and Module Organization}
-
-\subsection{Project Directory Structure}
-\begin{figure}[H]
-    \centering
-    % Replace with your directory structure diagram
-    \includegraphics[width=0.8\textwidth]{images/project-structure.png}
-    \caption{Project directory structure.}
-    \label{fig:project-structure}
-\end{figure}
-The project directory was organized to separate concerns and promote maintainability. Key folders included \texttt{src/}, \texttt{config/}, \texttt{tests/}, and \texttt{docker/}.
-
-\subsection{Core Modules}
-The codebase was modularized into the following core components:
-\begin{itemize}
-    \item \textbf{Gateway module:} Implements the WebSocket server and manages client connections
-    \item \textbf{Messaging module:} Handles publish/subscribe logic and message routing
-    \item \textbf{Channel management module:} Manages channels, memberships, and permissions
-    \item \textbf{Persistence module:} Interfaces with the database and storage systems
-    \item \textbf{Authentication module:} Manages user authentication and authorization
-\end{itemize}
-
-\subsection{Code Conventions and Naming Standards}
-\begin{itemize}
-    \item \textbf{CamelCase:} For variables and function names.
-    \item \textbf{PascalCase:} For class and component names.
-    \item \textbf{UPPERCASE:} For constants and environment variables.
-\end{itemize}
-Consistent code conventions and naming standards were enforced throughout the project, following widely accepted JavaScript/TypeScript best practices.
-
-\subsection{Configuration and Secrets Management}
-Sensitive configuration values and secrets were managed using environment variables and secure vaults, never hardcoded in the source code.
-
-
-\section{Implementation of Core Features}
-
-\subsection{Sample Code Snippets for Core Modules}
-
-\paragraph{Gateway Module (WebSocket Server)}
-This snippet illustrates a minimal WebSocket gateway implemented using the \texttt{ws} library. 
-The gateway is responsible for accepting client connections, performing authentication, and handling incoming real-time messages.
-
-\begin{lstlisting}[language=JavaScript, caption={Minimal WebSocket Gateway using ws}]
-const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 8080 });
-wss.on('connection', (ws, req) => {
-    // Authenticate user from token in req
-    ws.on('message', (msg) => {
-        // Handle incoming message
-    });
-});
-\end{lstlisting}
-
-\paragraph{Pub/Sub Module (Redis Example)}
-The following example demonstrates how Redis Pub/Sub is used to broadcast messages to multiple connected clients. 
-This mechanism enables horizontal scalability by decoupling message producers from consumers.
-
-\begin{lstlisting}[language=JavaScript, caption={Redis Pub/Sub for message fan-out}]
-const redis = require('redis');
-const pub = redis.createClient();
-const sub = redis.createClient();
-sub.subscribe('messages');
-sub.on('message', (channel, message) => {
-    // Deliver message to connected clients
-});
-// To publish:
-pub.publish('messages', JSON.stringify({ ... }));
-\end{lstlisting}
-
-\paragraph{Persistence Module (MongoDB Example)}
-This code snippet shows how chat messages are persisted to a MongoDB database. 
-Storing messages in a document-oriented database ensures durability and supports efficient retrieval for chat history.
-
-\begin{lstlisting}[language=JavaScript, caption={Persisting a message to MongoDB}]
-const { MongoClient } = require('mongodb');
-const client = new MongoClient(uri);
-await client.connect();
-const db = client.db('chat');
-await db.collection('messages').insertOne({ sender, content, timestamp });
-\end{lstlisting}
-
-\subsection{WebSocket Connection Lifecycle}
-The connection lifecycle includes the initial handshake, session initialization, and robust auto-reconnect logic to ensure reliability.
-\begin{itemize}
-    \item \textbf{Handshake process:} Secure upgrade from HTTP(S) to WebSocket
-    \item \textbf{Session initialization:} User authentication and session state setup
-    \item \textbf{Auto-reconnect behavior:} Exponential backoff and session resumption
-\end{itemize}
-
-\subsection{Message Send/Receive Pipeline}
-The message pipeline validates incoming messages, persists them, and efficiently delivers them to all intended recipients using a fan-out strategy.
-\begin{itemize}
-    \item \textbf{Validation:} Schema and permission checks
-    \item \textbf{Persistence:} Durable storage in the database
-    \item \textbf{Delivery FAN-OUT logic:} Efficient broadcast to channel members
-\end{itemize}
-
-\subsection{Presence Tracking Implementation}
-Presence is tracked in real time using in-memory data stores (e.g., Redis) and periodic heartbeats from clients.
-
-\subsection{Typing Indicator Implementation}
-Typing indicators are implemented using throttled WebSocket events, providing real-time feedback to channel participants.
-
-\subsection{Read Receipts and Delivery Status}
-Read receipts and delivery status are managed by tracking per-user message offsets and updating clients in real time.
-
-\subsection{Rate Limiting and Flood Protection}
-Rate limiting is enforced at the gateway and messaging layers to prevent abuse, using token bucket algorithms and per-user quotas.
-
-\subsection{Logging, Monitoring, and Metrics Integration}
-\begin{table}[H]
-    \centering
-    \caption{Sample metrics collected in the system.}
-    \label{tab:metrics}
-    \begin{tabular}{ll}
-        \toprule
-        \textbf{Metric} & \textbf{Description} \\
-        \midrule
-        Active Connections & Number of open WebSocket connections \\
-        Message Throughput & Messages processed per second \\
-        Error Rate & Number of failed operations \\
-        Latency (P95) & 95th percentile message delivery latency \\
-        \bottomrule
-    \end{tabular}
+\begin{table}[h]
+\centering
+\caption{Aggregated performance metrics and resource consumption (Normal Load - 200 VUs)}
+\label{tab:resource_summary_final}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Architecture} & \textbf{Total Requests ($N$)} & \textbf{Avg CPU (\%)} & \textbf{Avg RAM (MiB)} \\ \hline
+Microservice & 59,600 & 51.91\% & 440.00 \\ \hline
+Monolithic & 12,802 & 22.33\% & 470.00 \\ \hline
+\end{tabular}
 \end{table}
-Comprehensive logging and metrics are integrated using tools like Winston, Prometheus, and Grafana for observability and troubleshooting.
 
-\section{Deployment Setup}
+Substituting these values into the $RUE$ formulas, we derive the following efficiency scores:
 
-\subsection{Local Deployment with Docker}
-Developers can spin up the entire stack locally using Docker Compose, which orchestrates all required services and dependencies.
+\begin{itemize}
+    \item \textbf{Microservice:} $RUE_{CPU} \approx 1148.09$ (req/\%) and $RUE_{RAM} \approx 135.45$ (req/MiB).
+    \item \textbf{Monolithic:} $RUE_{CPU} \approx 573.22$ (req/\%) and $RUE_{RAM} \approx 27.23$ (req/MiB).
+\end{itemize}
 
-\subsection{Production Deployment Workflow}
-Production deployments follow a blue-green or rolling update strategy, with automated health checks and rollback mechanisms.
+The $RUE$ scores index reaching 1148.09 (twice higher than Monolithic's 573.22), which show that Monolithic do not equate to economics. 
+This calculation result is completely reasonable because although Monolithic has lower CPU 
+consumption (22.33\%), it can only handle 12,802 requests. Meanwhile, Microservice handles 
+up to 59,600 requests - 4.65 times more than Monolithic in the same time conditions. Microservice has 
+demonstrated the ability to convert resources into outstanding processing output, actually saving more operating costs when 
+considered per unit of successful request.
 
-\subsection{Continuous Integration and Delivery Pipeline (CI/CD)}
-CI/CD pipelines are implemented using GitHub Actions, automating build, test, and deployment steps for every code change.
-
-\subsection{Load Balancer \& Reverse Proxy Configuration}
-Nginx or HAProxy is configured as a reverse proxy and load balancer, handling TLS termination and distributing traffic to backend nodes.
+The cost calculus reverses under peak load, however. At 1,000 VUs, the Monolith processes 296,562 requests at a CPU cost of 95.36 units — approximately 1 CPU unit per 3,109 requests — while Microservices processes 266,469 requests at 392.15 CPU units — approximately 1 CPU unit per 679 requests. For cloud deployments where compute costs scale linearly with CPU allocation, the Monolith would incur approximately 4.58 times lower compute cost per successful request during peak periods. Institutions with highly variable traffic profiles — characterized by long periods of moderate load punctuated by short, intense enrollment or examination spikes — therefore face a genuine architectural cost trade-off that cannot be resolved by examining either load regime in isolation.
 
 
-\section{Testing Strategy}
-The testing strategy for this project draws on best practices from both academic and industry sources \cite{guth2018comparison,kim2023iot,nguyen2021pubsub,blogmicro2023}.
+\subsubsection{\textbf{Peak Load}}
 
-\subsection{Detailed Testing Process}
-\paragraph{Sample Test Case (Jest)}
-\begin{lstlisting}[language=JavaScript, caption={Sample unit test for message validation}]
-const validateMessage = require('../src/validateMessage');
-test('rejects empty message', () => {
-    expect(() => validateMessage('')).toThrow();
-});
-\end{lstlisting}
+In this scenario, the system was subjected to a peak load of 1,000 Virtual Users (VUs) to determine 
+its performance limits. As illustrated in Figure \ref{fig:peak_load_analysis}, the \textbf{Microservice} 
+architecture (blue line) experienced extreme CPU volatility, with frequent spikes reaching between 400\% and 600\% utilization. This indicates a massive computational overhead required to manage the complex orchestration and networking between eight different containers. Conversely, the \textbf{Monolithic} architecture (orange line) demonstrated remarkable resilience, maintaining a highly stable CPU profile consistently below 150\% throughout the duration of the test.
 
-\paragraph{Test Coverage}
-Test coverage is measured using Istanbul/nyc. Coverage reports are generated on every CI run, and minimum thresholds are enforced (e.g., 90\% statements, 85\% branches).
-
-\paragraph{CI/CD Pipeline Illustration}
-\begin{figure}[H]
-        \centering
-        %\includegraphics[width=0.7\textwidth]{images/cicd-pipeline.png}
-        \caption{CI/CD pipeline: build, test, coverage, deploy}
-        \label{fig:cicd-pipeline}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1\textwidth]{images/my-demo/charts/cost_efficient/production/peak_load.png}
+\caption{Resource consumption comparison under Peak Load (1000 VUs)}
+\label{fig:peak_load_analysis}
 \end{figure}
-The CI/CD pipeline (implemented with GitHub Actions) automatically builds, tests, checks coverage, and deploys the application on every push or pull request. Failed tests or insufficient coverage block deployment.
 
-\subsection{Overview of Testing Levels}
+In terms of memory allocation, Microservice maintained a lower footprint, fluctuating around 
+500 MiB. The \textbf{Monolithic} system required more memory, staying within the 600 - 700 MiB range. 
+However, this absolute memory advantage of Microservice does not translate into operational 
+efficiency when throughput is considered.
 
-Testing is performed at multiple levels to ensure correctness and reliability:
+Regarding the RUE metric, our team derived the following data for the Peak Load scenario: 
+
+\begin{table}[h]
+\centering
+\caption{Aggregated performance metrics and resource consumption (Peak Load - 1000 VUs)}
+\label{tab:resource_summary_peak}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Architecture} & \textbf{Total Requests ($N$)} & \textbf{Average CPU (\%)} & \textbf{Average RAM (MiB)} \\ \hline
+Microservice & 266,469 & 392.15\% & 510.50 \\ \hline
+Monolithic & 296,562 & 95.36\% & 620.20 \\ \hline
+\end{tabular}
+\end{table}
+
+Substituting these values into the $RUE$ formulas, we derive the following efficiency scores:
 \begin{itemize}
-    \item \textbf{Unit Testing:} Isolates and tests individual functions and modules
-    \item \textbf{Integration Testing:} Validates interactions between components
-    \item \textbf{End-to-End (E2E) Testing:} Simulates real user scenarios across the full stack
+    \item \textbf{Microservice:} $RUE_{CPU} \approx 679.51$ (req/\%) and $RUE_{RAM} \approx 521.98$ (req/MiB).
+    \item \textbf{Monolithic:} $RUE_{CPU} \approx 3109.90$ (req/\%) and $RUE_{RAM} \approx 478.17$ (req/MiB).
 \end{itemize}
 
-\subsection{Test Tooling}
-\begin{itemize}
-    \item \textbf{Jest:} Unit and integration testing.
-    \item \textbf{Mocha:} Flexible test runner for Node.js.
-    \item \textbf{Supertest:} HTTP assertions for REST APIs.
-    \item \textbf{Artillery, k6:} Load and performance testing.
-\end{itemize}
-Popular tools such as Jest, Mocha, Supertest, Artillery, and k6 are used for various testing needs, from unit to load testing.
+Monolithic in this time was overwhelmingly more efficient under peak load. With an $RUE_{CPU}$ of 3,109.90—approximately 4.58 times higher than that of Microservice (679.51)—the Monolithic system proves it can handle a significantly larger workload (296,562 requests) using only a fraction of the CPU power required by the Microservice model. This can be explained of Monolithic architecture eliminating the need for complex network calls between services, achieves superior process with much higher stability. For workloads involving extreme traffic spikes, the Monolithic architecture remains the more cost-effective and reliable choice in this specific environment.
 
-\subsection{Code Coverage Metrics}
-Code coverage is tracked using Istanbul/nyc, with thresholds enforced in CI to maintain high test quality.
-
-\subsection{Test Data Management}
-Test data is managed using fixtures and factories, ensuring repeatable and isolated test runs.
-
-\section{Automated Testing}
-
-\subsection{CI/CD Integration}
-Automated tests are run on every pull request and push to main branches, ensuring regressions are caught early.
-
-\subsection{Automated Unit Tests}
-Unit tests are written for all core modules, with mocks and stubs used to isolate dependencies.
-
-\subsection{Automated Integration Tests}
-Integration tests validate end-to-end flows, including WebSocket and REST API interactions.
-
-\subsection{WebSocket Event Simulation Scripts}
-Custom scripts simulate WebSocket events and user behavior to test real-time features under various scenarios.
-
-\section{Performance and Load Testing}
-
-% Performance and load testing, as well as experimental results, are presented in detail in Chapter~\ref{chap:deployment} (Deployment and Evaluation).
-
-\section{Scalability Testing}
-
-\subsection{Horizontal Scaling Tests}
-Tests are conducted to verify that the system scales linearly with the addition of nodes and resources.
-
-\subsection{Distributed Pub/Sub Load Testing}
-The pub/sub layer is stress-tested for message delivery consistency and latency across distributed nodes.
-
-\subsection{Multi-node Messaging Consistency Testing}
-Consistency of message delivery and ordering is validated in multi-node deployments.
-
-\subsection{Failover and Recovery Testing}
-Simulated node failures and network partitions are used to test the system's ability to recover and maintain service continuity.
-
-\section{Security Testing}
-Security testing is guided by established standards and recent research on secure messaging systems \cite{roberts2020aws,awsdocs,zhang2021aws,redisdocs}.
-
-\subsection{Authentication/Authorization Tests}
-Tests verify that only authorized users can access protected resources and perform privileged actions.
-
-\subsection{WebSocket Security Tests}
-\begin{itemize}
-    \item \textbf{Flooding:} Simulate excessive connection and message attempts
-    \item \textbf{Replay attacks:} Attempt to reuse old messages or tokens
-    \item \textbf{Message spoofing:} Test for unauthorized message injection
-\end{itemize}
-
-\subsection{Penetration Testing Overview}
-
-Penetration tests are conducted to identify vulnerabilities and validate the effectiveness of security controls.
-
-\subsection{OWASP-Based Test Checklist}
-
-A checklist based on the OWASP Top 10 is used to ensure comprehensive coverage of common web and API security risks.
-
-\section{Summary of Development and Testing}
-
-
-This chapter has summarized the development methodology, environment, implementation, deployment, and testing strategies for the real-time messaging system. Major milestones and test results have been highlighted, along with identified gaps and recommendations for future improvements.

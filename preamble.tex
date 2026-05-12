@@ -2,10 +2,22 @@
 \usepackage{plantuml}
 \usepackage{lipsum}  % For dummy text
 \usepackage{float}
+\usepackage{makecell}
+\usepackage{booktabs}
+\usepackage{pifont}
+\usepackage{enumitem}
+\usepackage{tabularray}
+\usepackage{scrextend}
+\changefontsizes{13pt} % Ép toàn bộ nội dung về 13pt chuẩn Word
+% \usepackage{newtxtext,newtxmath} % Font Times New Roman chuẩn và đẹp nhất cho LaTeX
+
 % ----- Encoding & Font -----
 \usepackage{polyglossia}
 \usepackage{fontspec}
+\setmonofont{Courier New}
 \setmainfont{Times New Roman}
+\usepackage{unicode-math} 
+\setmathfont{Cambria Math}
 
 % --- Colors (bắt buộc trước listings) ---
 \usepackage[dvipsnames,table]{xcolor}
@@ -48,21 +60,68 @@
 \usepackage{multirow}
 
 % ----- Math -----
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath}
 
 
 % ----- Code -----
 \usepackage{listings}
+\lstdefinestyle{tree}{
+  language=bash,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{green!50!black},
+  showstringspaces=false,
+  columns=fixed,            % 🔥 giữ độ rộng ký tự cố định
+  keepspaces=true,
+  frame=single,
+  rulecolor=\color{black!30},
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  aboveskip=1em,
+  belowskip=1em
+}
 \lstset{
   basicstyle=\ttfamily\normalsize,
   frame=none,
   breaklines=true,
   breakatwhitespace=true,
-  columns=fullflexible,
+  columns=fixed,
   keepspaces=true,
   captionpos=b,
   xleftmargin=0.5cm,
   xrightmargin=0.5cm
+}
+\lstdefinestyle{codeblock}{
+  basicstyle=\ttfamily\small,
+  columns=fixed,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  rulecolor=\color{black!30},
+  xleftmargin=10pt,
+  aboveskip=1em,
+  belowskip=1em
+}
+\lstdefinelanguage{YAML}{
+  keywords={true,false,null,y,n},
+  keywordstyle=\color{blue}\bfseries,
+  sensitive=false,
+  comment=[l]{\#},
+  commentstyle=\color{gray}\ttfamily,
+  stringstyle=\color{green!50!black}\ttfamily,
+  morestring=[b]",
+  morestring=[b]',
+}
+\lstdefinelanguage{Docker}{
+  keywords={FROM, RUN, CMD, LABEL, EXPOSE, ENV, ADD, COPY, ENTRYPOINT, VOLUME, USER, WORKDIR, ARG},
+  keywordstyle=\color{blue}\bfseries,
+  sensitive=false,
+  comment=[l]{\#},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{gray}\ttfamily,
+  stringstyle=\color{green!50!black}\ttfamily,
+  morestring=[b]",
 }
 
 \lstdefinelanguage{JavaScript}{
@@ -87,3 +146,14 @@
 % ----- Bibliography -----
 \usepackage{cite}
 \usepackage[hidelinks]{hyperref}
+
+% ----- Paragraph indentation (1 tab ≈ 1.27 cm) -----
+\setlength{\parindent}{1.27cm}
+
+% ----- Page numbering at top center -----
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+

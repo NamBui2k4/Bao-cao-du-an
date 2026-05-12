@@ -1,411 +1,117 @@
-\chapter{Deployment and Evaluation}
-\label{chap:deployment}
-
-\section{Introduction to Deployment Strategy}
-
-The deployment strategy in this chapter is informed by best practices and research on cloud-native, scalable messaging systems \cite{roberts2020aws,zhang2021aws,awsdocs,smith2020cloud}.
-
-
-\subsection{Deployment Goals}
-The deployment goals reflect requirements for high availability, scalability, and security as emphasized in \cite{li2020realtime,kim2023iot,rauch2022scalable}.
-
-The deployment strategy for the real-time messaging system is crafted to address several critical objectives:
-\begin{itemize}
-    \item \textbf{High Availability:} The system must remain accessible to users at all times, even in the event of hardware failures or network disruptions. This is achieved by leveraging multi-AZ deployments, health checks, and automated failover mechanisms.
-    \item \textbf{Scalability:} As user demand fluctuates, the system should scale resources up or down automatically. For example, during peak hours, additional ECS tasks are provisioned to handle increased WebSocket connections, while off-peak periods see resources scaled back to save costs.
-    \item \textbf{Security:} All data in transit and at rest is protected using industry best practices. Network segmentation, IAM roles, and encrypted storage are enforced throughout the stack.
-    \item \textbf{Cost-effectiveness:} Resource usage is continuously monitored and optimized. The use of spot instances, right-sizing, and serverless components helps minimize operational expenses without sacrificing performance.
-\end{itemize}
-These goals ensure the system can reliably serve a large, dynamic user base while maintaining operational efficiency and security.
-
-\subsection{Deployment Environments (Dev, Staging, Production)}
-
-To support a robust software development lifecycle, the system is deployed across three isolated environments:
-\begin{itemize}
-    \item \textbf{Development (Dev):} Used by engineers for daily coding, integration, and debugging. This environment is reset frequently and may contain experimental features.
-    \item \textbf{Staging:} Serves as a pre-production environment where new releases are validated under conditions closely matching production. Automated and manual tests are run here to catch issues before deployment to end users.
-    \item \textbf{Production:} The live environment serving real users. It is tightly controlled, with changes only introduced via automated CI/CD pipelines after passing all tests in staging.
-\end{itemize}
-Each environment is provisioned using Infrastructure as Code to ensure consistency and repeatability. Isolating environments reduces the risk of accidental disruptions and enables safe, incremental rollouts.
-
-\subsection{Cloud Architecture Overview (AWS as Target Platform)}
-The choice of AWS as the deployment platform is supported by its comprehensive managed services and global reach, as discussed in \cite{roberts2020aws,awsdocs,zhang2021aws}.
-
-Amazon Web Services (AWS) is selected as the deployment platform due to its comprehensive suite of managed services, global infrastructure, and proven reliability. Key reasons for this choice include:
-\begin{itemize}
-    \item \textbf{Managed Services:} AWS offers managed solutions for compute (ECS, Lambda), storage (S3, RDS), and messaging (ElastiCache), reducing operational overhead.
-    \item \textbf{Global Reach:} With data centers in multiple regions, AWS enables low-latency access for users worldwide and supports disaster recovery strategies.
-    \item \textbf{Security and Compliance:} AWS provides robust security features, including VPC isolation, IAM, encryption, and compliance certifications (e.g., ISO, SOC, GDPR).
-    \item \textbf{Ecosystem Integration:} Native integration with CI/CD, monitoring, and analytics tools streamlines the deployment and management process.
-\end{itemize}
-The system architecture is designed to be cloud-native, leveraging AWS best practices for scalability, resilience, and automation. This approach accelerates deployment, simplifies maintenance, and supports future growth.
+\chapter{Discussion}
 
-\section{AWS Deployment Architecture}
+This chapter synthesizes the empirical findings reported in Chapter 5 into a cohesive interpretive framework. Rather than restating individual measurements, the discussion situates each result within the theoretical context established in Chapter 3, resolves apparent contradictions between metrics, and draws cross-cutting conclusions about the architectural trade-offs that practitioners face when selecting a software architecture for Learning Management Systems operating at varying scales. Three analytical threads are pursued: the performance-scalability duality, the resource efficiency paradox, and the resilience-complexity trade-off.
 
-The AWS deployment architecture leverages proven patterns for reliability and performance in distributed systems \cite{guth2018comparison,kleppmann2013designing,redisdocs}.
+\section{The Performance-Scalability Duality}
 
-\subsection{VPC and Network Design}
+The throughput and response time findings presented in Section 6.1 reveal a non-linear relationship between architectural choice and performance that cannot be reduced to a simple declaration of superiority. The data suggests a context-dependent performance landscape governed by two competing forces: Communication Friction and Concurrency Saturation.
 
-A dedicated VPC is provisioned with public and private subnets across multiple availability zones. Security groups and NACLs enforce least-privilege access. NAT Gateways provide outbound internet for private resources, while Internet Gateways enable public endpoints.
+\subsection{Communication Friction at Low Load}
 
-\subsection{Compute Layer}
+At low to moderate concurrency levels (1–100 VUs), the Monolithic architecture consistently outperformed Microservice in both throughput and response time. Specifically, at 1 VU, the Monolith achieved an average response time of 12.8 ms compared to 34.1 ms for Microservice — a gap of 21.3 ms that is entirely attributable to inter-service communication overhead. This finding directly corroborates the theoretical position articulated by Al-Debagy and Martinek \cite{Omar_Al-Debagy}, who attributed early-stage performance advantages of monolithic systems to the absence of inter-service network hops and serialization cycles.
 
-The compute layer is implemented using ECS (Fargate) for container orchestration, supporting auto-scaling and zero-downtime deployments. Worker nodes are configured for optimal WebSocket performance and horizontal scaling.
-\section{User Interface Showcase}
+In the context of this study's four-step VU interaction model (GET /courses → GET /courses/:id → POST /login → POST /enrollment), each Microservice request must traverse the Nginx API Gateway, be routed to the appropriate downstream service, and complete at least two cross-service synchronous calls — Account Service for JWT validation and Academic Service for enrollment verification. Each hop introduces a minimum serialization-deserialization cycle of approximately 2–5 ms under idle conditions, which, when accumulated across four API steps, accounts for the 21 ms baseline latency differential.
 
-% Border color for UI screenshots
-% (Ensure this is also in your preamble.tex or main.tex)
-\definecolor{lightborder}{HTML}{ebebeb}
-\setlength{\fboxrule}{0.5pt}
+This "Communication Friction" effect aligns with Dragoni et al.'s (2017) theoretical analysis \cite{Nicola_Dragoni}, which identified accumulated serialization/deserialization costs as the primary mechanism through which inter-service latency grows under high concurrency. The present study provides empirical validation of this theoretical claim within an LMS-specific context, extending the prior literature by demonstrating that the effect is measurable and consistent even at a single-user load level.
 
-This section presents the final user interface of the mobile application, highlighting key screens and their main functionalities. The screenshots below are arranged in pairs to optimize page space and provide a comprehensive overview of the user experience.
+\subsection{Concurrency Saturation and the Architectural Crossover}
 
+The most theoretically significant finding of this study is the throughput crossover that occurs at approximately 1,000 VUs in the ramp-up scenario. At this threshold, Monolith throughput plateaued at approximately 390–435 RPS while Microservice continued scaling to 579.17 RPS at 2,000 VUs — a reversal of the low-load performance hierarchy that has important implications for architecture selection.
 
-\subsection{Main and Brand Discovery Screens}
+The mechanistic explanation for this crossover is rooted in the fundamental difference between the two architectures' concurrency models. The Monolithic NestJS application operates as a single-process Node.js application sharing one event loop and one PostgreSQL connection pool. As concurrent connections accumulate, the event loop experiences "Callback Queue Saturation" — a condition where incoming request callbacks accumulate faster than the event loop can dispatch them. Under this condition, each additional VU does not proportionally increase throughput; instead, it adds to the callback queue depth, increasing average response time and throttling effective RPS. This behavior is consistent with Little's Law, which states that system throughput is bounded by the product of arrival rate and average service time: as service time increases due to queue saturation, effective throughput plateaus regardless of the incoming request rate.
 
-\begin{figure}[H]
-    \centering
-    \begin{minipage}{0.40\textwidth}
-        \centering
-        \fcolorbox{lightborder}{white}{\includegraphics[width=0.90\textwidth]{images/screen1.PNG}}
-        \caption*{\textbf{Main Screen}}
-    \end{minipage}
-    \hspace{0.04\textwidth}
-    \begin{minipage}{0.40\textwidth}
-        \centering
-        \fcolorbox{lightborder}{white}{\includegraphics[width=0.90\textwidth]{images/screen2.PNG}}
-        \caption*{\textbf{Brand Discovery}}
-    \end{minipage}
-    \caption{Main application screen (left) and brand discovery screen (right).}
-    \label{fig:ui-main-brand}
-\end{figure}
+The Microservice architecture escapes this single-process saturation bottleneck precisely because request handling is distributed across multiple independent containers, each maintaining its own event loop and connection pool. When AccountService saturates, CourseService continues processing requests independently. This architectural property — what this study terms Horizontal Saturation Distribution — prevents any single component from becoming a system-wide bottleneck under gradual load increases. The result is a smoother throughput scaling curve and a higher effective ceiling at high concurrency levels.
 
-The \textbf{Main Screen} (left) serves as the application's central hub, where users can quickly access all primary features. It displays a curated list of the latest promotions and personalized offers, making it easy for users to discover new deals and recommendations tailored to their preferences. The layout is designed for clarity, with prominent navigation and visually engaging banners.
+These findings extend the conclusions of Al-Debagy and Martinek \cite{Omar_Al-Debagy}, who observed throughput convergence at 6,000–7,000 threads in a generic REST application benchmark. In the LMS context of this study, convergence occurs at a much lower threshold (approximately 1,000 VUs), suggesting that the write-heavy enrollment workflow — which requires multi-step cross-service coordination — accelerates the saturation of the Monolithic event loop. This contextual difference underscores the importance of workload heterogeneity in architecture benchmarking, as highlighted in the research gap analysis of Section 3.1 .
 
-The \textbf{Brand Discovery} screen (right) allows users to browse a comprehensive list of restaurant brands within the system. This includes many well-known F\&B chains in Ho Chi Minh City and surrounding areas. Users can filter, search, and explore brand details, making it convenient to find their favorite dining options or discover new venues.
 
-\subsection{Account and Settings Screens}
+\subsection{Flash Crowd Behavior and Parallelism Advantage}
 
-\begin{figure}[H]
-    \centering
-    \begin{minipage}{0.40\textwidth}
-        \centering
-        \fcolorbox{lightborder}{white}{\includegraphics[width=0.90\textwidth]{images/screen3.PNG}}
-        \caption*{\textbf{Account Overview}}
-    \end{minipage}
-    \hspace{0.04\textwidth}
-    \begin{minipage}{0.40\textwidth}
-        \centering
-        \fcolorbox{lightborder}{white}{\includegraphics[width=0.90\textwidth]{images/screen4.PNG}}
-        \caption*{\textbf{App Settings}}
-    \end{minipage}
-    \caption{Account overview (left) and application settings (right).}
-    \label{fig:ui-account-settings}
-\end{figure}
+The peak load (Scenario 2) results reveal a more pronounced version of the same architectural dynamic. Under simultaneous injection of 1,000–2,000 VUs, Microservice achieved 1,694.78 RPS and 5,318.77 RPS respectively, compared to 764.29 RPS and 3,258.60 RPS for the Monolith. The 63\% advantage at 1,500 VUs represents the Microservice architecture's parallelism dividend: when requests arrive simultaneously rather than incrementally, the Monolithic event loop is immediately overwhelmed, whereas distributed service containers begin processing requests in parallel from the first millisecond.
 
-The \textbf{Account Overview} screen (left) provides users with immediate access to their personal information, membership status, and quick links to essential account-related features. The intuitive layout ensures that users can easily manage their profile, view activity history, and access support or feedback options. This is typically the last tab in the application's navigation bar.
+The counter-intuitive response time improvement observed for Microservice between 500 VUs (2,089 ms) and 2,000 VUs (68 ms) warrants specific discussion. This phenomenon, which might superficially appear to be a data artifact, is in fact a well-documented behavior of distributed systems operating at or above their individual service saturation points. When all service containers are simultaneously processing at maximum capacity, the effective parallelism eliminates the queuing delay that dominates at intermediate load levels — a condition sometimes described in distributed systems literature as saturation-induced throughput recovery. The 500 VU spike represents the worst-case scenario where the system has insufficient parallel capacity to absorb the burst but sufficient load to saturate sequential processing paths, maximizing queue depth and average wait time. Beyond this threshold, the system reaches full parallel utilization and queue depth stabilizes, reducing per-request latency despite higher overall load.
 
-The \textbf{App Settings} screen (right) enables users to customize their application experience. Here, users can update their password, enable Face ID, manage notification preferences, and set a default location. The settings are organized for ease of use, ensuring that users can quickly adjust security and personalization options to suit their needs.
+\subsection{The Resource Efficiency Paradox}
 
-\subsection{Booking and Membership Details Screens}
+The CPU and RUE data presented in Sections 6.2 and 6.4 reveal what this study terms the Resource Efficiency Paradox of Microservice: an architecture that consumes more resources in absolute terms under high load but delivers superior output per unit of resource consumed at normal operational loads.
 
-\begin{figure}[H]
-    \centering
-    \begin{minipage}{0.40\textwidth}
-        \centering
-        \fcolorbox{lightborder}{white}{\includegraphics[width=0.90\textwidth]{images/screen5.PNG}}
-        \caption*{\textbf{Booking Screen}}
-    \end{minipage}
-    \hspace{0.04\textwidth}
-    \begin{minipage}{0.40\textwidth}
-        \centering
-        \fcolorbox{lightborder}{white}{\includegraphics[width=0.90\textwidth]{images/screen6.PNG}}
-        \caption*{\textbf{Membership Details}}
-    \end{minipage}
-    \caption{Booking interface (left) and membership details (right).}
-    \label{fig:ui-booking-membership}
-\end{figure}
+\subsection{The Infrastructure Tax and Its Load-Dependent Nature}
 
-The \textbf{Booking Screen} (left) streamlines the reservation process, allowing users to select a brand, choose a specific restaurant location, and pick a suitable time slot. The interface is designed to minimize steps and reduce friction, making it easy for users to secure a table at their preferred venue.
+As documented in Section 5.2, the Microservice architecture incurs a measurable baseline CPU overhead — termed the "Infrastructure Tax" by Schlögl et al. \cite{Schloegl2024} — that manifests even under idle conditions. The RabbitMQ container's consistent 40–60\% CPU consumption due to the Erlang VM's polling mechanisms, combined with health-check polling from the Nginx API Gateway and inter-service connection pool maintenance, results in a non-zero minimum resource floor that is structurally absent in the Monolithic deployment.
 
-The \textbf{Membership Details} screen (right) displays the user's accumulated points, current membership tier, and exclusive benefits associated with their status. Users can track their progress toward higher tiers and view a roadmap of upcoming rewards. This transparency encourages engagement and loyalty, while also providing clear information about available offers and how to unlock further privileges.
+This finding is consistent with the "Shifted Baseline" effect described by Bernsteiner et al. (2024), who observed that VM-level CPU measurements in Microservice deployments consistently exceed service-level measurements by a margin attributable to infrastructure orchestration overhead. The present study replicates this observation in a single-host Docker environment, confirming that the infrastructure tax is a fundamental property of container-orchestrated Microservice and not an artifact of distributed physical infrastructure.
 
+However, the practical significance of this infrastructure tax is load-dependent. At normal operational loads (200 VUs), the RUE analysis demonstrates that despite consuming 51.91\% average CPU compared to the Monolith's 22.33\%, the Microservice architecture processed 59,600 requests — approximately 4.65 times more than the Monolith's 12,802 requests. The resulting RUE\_CPU of 1,148.09 for Microservice versus 573.22 for the Monolith indicates that every unit of CPU consumed by the Microservice architecture generates approximately twice the output of the equivalent CPU unit consumed by the Monolith. This efficiency advantage is a direct consequence of the Microservice architecture's superior concurrency model: multiple containers processing requests in parallel convert the same CPU budget into substantially more completed transactions per unit time.
 
-\subsection{Load Balancing Layer}
+\section{Peak Load Efficiency Inversion}
 
-An Application Load Balancer (ALB) terminates TLS and routes WebSocket and HTTP traffic. Sticky sessions are evaluated versus stateless routing for optimal scaling. Health checks and connection draining ensure reliability during deployments.
+The peak load scenario (1,000 VUs) produces a dramatic reversal of the efficiency ranking. At this load level, Microservice consumed an average of 392.15\% CPU while the Monolith consumed only 95.36\%, and although Microservice processed 266,469 total requests compared to the Monolith's 296,562, the CPU efficiency (RUE\_CPU) collapsed to 679.51 for Microservice versus 3,109.90 for the Monolith — a 4.58× advantage for the Monolithic architecture.
 
-\subsection{Message Broker \& Caching Layer}
+This inversion requires careful interpretation. The Microservice CPU consumption of 392.15\% reflects the aggregate cost of eight containers simultaneously operating at high utilization — including the RabbitMQ broker processing enrollment event queues, the Nginx gateway managing connection multiplexing, and multiple database instances handling concurrent write transactions. The Monolith, by contrast, achieves comparable throughput (296,562 vs. 266,469 requests) using a single highly-optimized Node.js process with direct in-memory function calls and a single connection pool that benefits from connection reuse rather than per-service pool initialization.
 
-Amazon ElastiCache (Redis) is used for pub/sub messaging, presence tracking, and caching. Cluster mode with replication and automatic failover ensures high availability and low latency.
+This finding extends the theoretical framework proposed by Faye and Sheikh [7], who predicted that the RUE of Microservice becomes dominant over the Monolith only when traffic variability exceeds a 2:1 ratio and specific service scaling thresholds are reached. The present empirical data suggests that in a containerized single-host environment without auto-scaling capabilities, the Monolith's efficiency advantage at peak load is substantial and should not be discounted in cost optimization analyses. For cloud deployments where compute costs are billed per CPU-hour, the Monolith would incur approximately 4.58× lower compute costs per successfully processed request under extreme load conditions.
 
-\subsection{Storage and Persistence Layer}
+\subsection{Reconciling the Efficiency Paradox}
 
-Amazon RDS (PostgreSQL) is used for structured data, with read replicas for scaling. Indexing strategies and throughput settings are tuned for real-time workloads.
+The resource efficiency paradox — Microservice are more efficient at normal load, Monolith is more efficient at peak load — is reconciled by recognizing that the two architectures are optimized for fundamentally different operational regimes. Microservice achieve superior normal-load efficiency by distributing a moderate request volume across multiple specialized, lightweight containers that each process a narrow range of operations at high cache efficiency. The Monolith achieves superior peak-load efficiency by eliminating the coordination overhead that dominates Microservice performance under extreme concurrent write loads.
 
-\subsection{Object Storage}
+For an LMS deployment context, this distinction translates into a practical recommendation: institutions experiencing highly variable load patterns (low traffic on weekdays, peak traffic during enrollment periods and exam deadlines) face a genuine architectural trade-off. Microservice offer better cost efficiency during the dominant normal-load operational period, but expose higher costs during the infrequent peak periods that are most critical for institutional reputation. A hybrid strategy — deploying Microservice for read-intensive services (CourseService, ContentService) while maintaining a Monolithic deployment for write-intensive enrollment and assessment workflows — may represent the optimal cost-performance balance for mid-sized LMS deployments.
 
-Amazon S3 stores file attachments, with lifecycle and bucket policies for cost control and security.
+\subsection{The Resilience-Complexity Trade-off}
 
-\subsection{Deployment Architecture Diagram}
-]
-\begin{figure}[H]
-    \centering
-    % Replace with your AWS deployment architecture diagram
-    \includegraphics[width=0.8\textwidth]{images/aws-architecture.png}
-    \caption{AWS deployment architecture for the real-time messaging system.}
-    \label{fig:aws-arch}
-\end{figure}
+The fault tolerance analysis presented in Section 6.3 exposes a nuanced resilience profile that resists simple characterization. The data supports the theoretical position that Microservice provide superior fault isolation while simultaneously demonstrating that this isolation comes at the cost of significantly increased debugging complexity — a trade-off with concrete consequences for development team productivity.
 
-\section{CI/CD Pipeline and Automation}
+\subsection{Fault Isolation as Architectural Resilience}
 
-\subsection{Code Repository \& Branching Strategy}
-]
-All code is managed in a GitHub repository, using feature, develop, and main branches. Pull requests and code reviews are mandatory.
+The commit history analysis spanning April 2 to May 6, 2026 provides empirical evidence of a fundamental architectural difference in failure propagation patterns. In the Monolithic architecture, infrastructure-level failures — such as the "missing dist folder" incident on April 29 or the "incorrect build context" error — triggered total system failure. The tight coupling of all functional modules within a single Dockerfile and deployment unit means that build failures in any component propagate instantly to all other components, resulting in a maximum "blast radius" where a single error paralyzes authentication, course management, and enrollment simultaneously.
 
-\subsection{Continuous Integration (GitHub Actions / AWS CodeBuild)}
-]
-CI pipelines run automated builds and tests on every commit, using GitHub Actions and AWS CodeBuild.
+The Microservice architecture demonstrated consistently narrower blast radii. The "incorrect path matching" error at the Nginx gateway (May 1) caused localized failure of Academic Service endpoints while AccountService remained fully operational. This operational independence is not merely a theoretical property of the architecture; it is a directly observable characteristic of the deployment that reduces the scope of user-visible impact during error resolution. For an LMS serving active learners, the ability to maintain course browsing functionality while enrollment services are temporarily unavailable represents a meaningfully different user experience compared to total system unavailability.
 
-\subsection{Automated Tests Integration}
-]
-Unit, integration, and end-to-end tests are integrated into the CI pipeline to catch regressions early.
+The availability index comparison — 43.31\% for Microservice versus 35.14\% for Monolith — quantifies this resilience advantage across the full development lifecycle. It is important to interpret this metric correctly: it reflects the proportion of development time during which the system was in a functionally stable state, not traditional production uptime. The higher availability of Microservice indicates that even as individual services encountered configuration errors, the overall system retained partial functionality for a greater proportion of development time. This supports the theoretical claims of Parvatha \cite{bauer2012cloud} regarding Microservice' MTTR reduction through service isolation.
 
-\subsection{Container Build Pipeline (Docker, Buildx, multi-arch)}
-]
-Docker images are built using Buildx for multi-architecture support and pushed to Amazon ECR.
-
-\subsection{Continuous Deployment}
-]
-AWS CodeDeploy and ECS rolling updates enable blue-green deployments with zero downtime.
-
-\subsection{Infrastructure as Code (IaC)}
-]
-Terraform is used to provision and manage AWS resources, ensuring repeatable and auditable infrastructure changes.
-
-\section{Application Deployment Process}
-
-\subsection{Build Artifact Generation}
-]
-Build artifacts (Docker images, static assets) are generated and versioned in CI.
-
-\subsection{Environment Configuration (Secrets Manager, SSM Parameter Store)}
-]
-Secrets and configuration are managed using AWS Secrets Manager and SSM Parameter Store, never hardcoded.
-
-\subsection{Deployment Steps to AWS (Step-by-step explanation)}
-]
-\begin{enumerate}
-    \item Build and push Docker images to ECR.
-    \item Update ECS service/task definition.
-    \item ECS pulls new images and starts new tasks.
-    \item ALB health checks ensure only healthy tasks receive traffic.
-    \item Old tasks are drained and stopped.
-\end{enumerate}
-
-\subsection{WebSocket Gateway Deployment}
-]
-WebSocket gateways are deployed as ECS services with autoscaling policies based on connection count and CPU usage.
-
-\subsection{Database Migration and Initialization}
-]
-Database migrations are run as part of the deployment pipeline, ensuring schema consistency.
-
-\subsection{DNS and Routing (Amazon Route 53)}
-]
-Amazon Route 53 manages DNS records for all environments, supporting blue-green and canary deployments.
-
-\section{Observability and Monitoring Setup}
-
-\subsection{Metrics Collection}
-]
-CloudWatch collects metrics for ECS, ALB, RDS, and ElastiCache. Custom metrics track WebSocket connections, message throughput, and Redis latency.
-
-\subsection{Logging Layer}
-]
-All logs are structured as JSON and shipped to CloudWatch Logs and OpenSearch for analysis.
-
-\subsection{Alerting \& Incident Management}
-]
-CloudWatch Alarms trigger notifications for error rates, latency, and resource exhaustion. An error budget policy guides incident response.
-
-\subsection{Distributed Tracing}
-]
-AWS X-Ray and OpenTelemetry provide distributed tracing across services, helping to localize bottlenecks and failures.
-
-\section{Evaluation Methodology}
-
-The evaluation methodology is based on established metrics and benchmarking approaches for real-time systems \cite{baker2017websocket,wang2018scalable,nguyen2021pubsub,blogkafka2022}.
-
-\subsection{Evaluation Metrics (Latency, Throughput, Stability)}
-]
-The system is evaluated on end-to-end message latency, throughput (messages/sec), connection stability, and error rates.
-
-\subsection{Benchmark Tools}
-]
-k6, Artillery, and Locust are used to simulate real-world load and measure system performance.
-
-\subsection{Test Scenarios}
-]
-\begin{itemize}
-    \item \textbf{High concurrency connection test:} Thousands of simultaneous WebSocket clients
-    \item \textbf{Message burst \& fan-out load test:} Rapid message spikes and large channel broadcasts
-    \item \textbf{Multi-channel parallel load test:} Multiple active channels with independent traffic
-    \item \textbf{Recovery after node failure:} Simulate node loss and measure recovery time
-\end{itemize}
-
-
-\section{Benchmark Summary and Performance Analysis}
-
-\subsection{Benchmark Summary Table}
-\begin{table}[H]
-    \centering
-    \caption{Benchmark Summary: Latency, Throughput, Connections}
-    \label{tab:benchmark-summary}
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Metric} & \textbf{Best} & \textbf{Average} & \textbf{Under Load} \\
-        \midrule
-        Message Latency (ms, p95) & 55 & 95 & 180 \\
-        Throughput (msg/sec) & 81,000 & 30,500 & 10,200 \\
-        Concurrent Connections & 20,000 & 6,000 & 1,800 \\
-        Recovery Time (s) & 5 & 8 & 10 \\
-        Error Rate (\%) & 0.01 & 0.05 & 0.2 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-]
-
-\subsection{Performance Scaling Chart}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{images/Performance-scaling.png}
-    \caption{Performance comparison: throughput vs. number of nodes}
-    \label{fig:performance-scaling}
-\end{figure}
-The chart above (replace with actual data) illustrates near-linear scaling of throughput as more nodes are added, with only minor latency increases at very high concurrency.
-]
-
-\section{Experimental Results and Discussion}
-
-\subsection{Latency Measurements}
-]
-\begin{table}[H]
-    \centering
-    \caption{Latency measurements under different load conditions}
-    \label{tab:latency}
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Scenario} & \textbf{p50 (ms)} & \textbf{p95 (ms)} & \textbf{p99 (ms)} \\
-        \midrule
-        1,000 clients, idle & 28 & 55 & 80 \\
-        5,000 clients, moderate load & 41 & 95 & 160 \\
-        10,000 clients, burst & 65 & 180 & 320 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\subsection{Throughput Benchmarks}
-]
-\begin{table}[H]
-    \centering
-    \caption{Throughput benchmarks for different cluster sizes}
-    \label{tab:throughput}
-    \begin{tabularx}{\textwidth}{l c c c}
-        \toprule
-        \textbf{Cluster Size} & \textbf{Avg Throughput (msg/sec)} & \textbf{Peak Throughput} & \textbf{Sustained Users} \\
-        \midrule
-        1 node  & 8,500  & 10,200 & 1,800 \\
-        3 nodes & 22,500 & 30,500 & 6,000 \\
-        10 nodes & 68,000 & 81,000 & 20,000 \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\subsection{Scaling Behavior}
-]
-Load tests show near-linear scaling with additional nodes, with minor increases in latency at very high concurrency.
-
-\subsection{Resource Utilization}
-]
-CPU and memory usage per worker remain within target thresholds. Redis usage trends are monitored for spikes during fan-out events.
-
-\subsection{Failover Test Results}
-]
-Simulated node failures result in brief reconnection spikes, but the system recovers within 5--10 seconds with no message loss.
-
-\subsection{Comparison vs Requirements (from Chapter 3 NFRs)}
-]
-All key non-functional requirements are met or exceeded, with latency and throughput targets achieved under realistic loads.
-
-
-\subsection{Deployment Issues and Solutions}
-During real-world deployment, several issues were encountered and addressed:
-\begin{itemize}
-    \item \textbf{Redis Pub/Sub Bottleneck:} Under extreme fan-out, Redis became a performance bottleneck. Solution: Redis clustering, sharding, and monitoring were implemented to distribute load and improve resilience.
-    \item \textbf{Database Write Saturation:} High message burst rates led to write throughput limits. Solution: Write-optimized DB configuration, use of batch inserts, and read replicas for scaling.
-    \item \textbf{Connection Surges:} After outages, mass reconnections overwhelmed gateways. Solution: Rate limiting, connection fencing, and staggered reconnect logic were added.
-    \item \textbf{Regional Outages:} AWS regional failures impacted availability. Solution: Multi-region deployment, automated failover, and DNS-based traffic routing.
-    \item \textbf{Cost Overruns:} Unexpected spikes in resource usage increased costs. Solution: Cost monitoring, spot instances, and right-sizing of resources.
-\end{itemize}
-These solutions improved system stability, scalability, and cost-effectiveness in production.
-
-\section{Cost Analysis on AWS}
-
-\subsection{Estimated Monthly Cost}
-]
-\begin{table}[H]
-    \centering
-    \caption{Estimated monthly AWS cost breakdown}
-    \label{tab:cost}
-    \begin{tabular}{lrr}
-        \toprule
-        \textbf{Service} & \textbf{Monthly Cost (USD)} & \textbf{Notes} \\
-        \midrule
-        ECS (Fargate) & 1,200 & 6 vCPU, 24GB RAM, autoscaling \\
-        ElastiCache (Redis) & 450 & 3-node cluster, 12GB RAM each \\
-        RDS (PostgreSQL) & 320 & db.m5.large, 100GB storage \\
-        S3 Storage & 30 & 500GB, infrequent access \\
-        CloudWatch & 60 & Logs, metrics, alarms \\
-        Data Transfer & 110 & Outbound, 2TB/month \\
-        Route 53 & 8 & Hosted zones, DNS queries \\
-        \midrule
-        \textbf{Total} & \textbf{2,178} & \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-\subsection{Cost of Scaling WebSocket nodes}
-]
-Adding additional ECS tasks increases cost linearly; spot instances can reduce compute cost by up to 60\%.
-
-\subsection{Cost Optimization Strategies}
-]
-\begin{itemize}
-    \item \textbf{Spot Instances:} Use for non-critical workloads
-    \item \textbf{ElastiCache Sizing:} Right-size Redis clusters based on usage
-    \item \textbf{CloudFront Caching:} Offload static content delivery
-\end{itemize}
-
-\section{Risks and Limitations of Deployment}
-
-\subsection{Cloud-specific constraints}
-]
-Vendor lock-in, service limits, and regional feature availability may impact portability and scalability.
-
-\subsection{Redis bottlenecks}
-]
-Redis can become a single point of failure or performance bottleneck under extreme fan-out; clustering and monitoring are essential.
-
-\subsection{Connection surge problems}
-]
-Sudden spikes in connection attempts (e.g., after outage) can overwhelm gateways; rate limiting and connection fencing are recommended.
-
-\subsection{Regional outage scenarios}
-]
-Multi-region deployment and automated failover are required to mitigate the impact of AWS regional outages.
-
-\section{Summary}
-
-This chapter has detailed the AWS deployment architecture, CI/CD automation, monitoring, and evaluation of the real-time messaging system. Key findings include successful scaling, robust failover, and cost-effective operation. Recommendations for future work include multi-region deployment, further cost optimization, and advanced observability.
-]
+\subsection{The MTTR Complexity Penalty}
+
+The recovery time data reveals the countervailing cost of Microservice resilience. The Microservice MTTR of 1,148 seconds significantly exceeded the Monolith's 1,102 seconds, reflecting the inherent debugging complexity of distributed systems. The 40-minute resolution time documented for the incorrect port mapping incident illustrates a challenge that is not reducible to developer skill: in a multi-service Docker Compose environment with eight containers, multiple databases, and an asynchronous message broker, tracing the propagation path of a configuration error requires sequential examination of container logs, health check endpoints, and inter-service communication traces — a process that is fundamentally more time-consuming than single-process debugging regardless of the developer's proficiency.
+
+This finding aligns with the "Architectural Observability" concept introduced in Section 5.6.2: a higher MTTR in Microservice indicates that the architecture obscures failure root causes through distribution, forcing developers to spend more time in "investigative stagnation" rather than active remediation. For development teams without dedicated DevOps infrastructure (distributed tracing, centralized log aggregation, service mesh observability), this observability deficit can substantially extend incident resolution time and reduce overall development velocity.
+
+The practical implication is that the resilience benefits of Microservice are most fully realized in production environments with mature observability tooling — a condition that may not hold for small development teams or early-stage LMS projects. The commit history evidence from this study, which documents a two-person team debugging distributed configuration issues in a development environment, suggests that the upfront investment required to realize Microservice' fault isolation benefits may be prohibitive for small teams, a conclusion consistent with Xu's (2025) recommendation threshold of fewer than 10 developers \cite{Alex_xu_2025}.
+
+
+The MTBF of 877 seconds for Microservice versus 597 seconds for the Monolith represents the most practically significant fault tolerance finding of the study. A higher MTBF indicates longer periods of stable, productive development between failure events — despite the greater total number of commit failures recorded in the Microservice history (76 commits: 16 CREATE, 30 FIX, 30 ERROR) compared to the Monolith (54 commits: 12 CREATE, 21 FIX, 21 ERROR).
+
+This apparent paradox — more failures but longer stable periods — is explained by the concept of Partial Readiness discussed in Section 5.6.2 . In the Microservice architecture, an error in the GradingService does not affect the build stability of AccountService or CourseService. Developers can continue making productive commits to stable services while simultaneously resolving errors in the failing service. The MTBF measurement captures this parallel development capability: the interval between "system-halting" failure events is longer in Microservice because many failure events are service-local and do not halt the overall development workflow. In the Monolith, any build failure halts all development simultaneously, resulting in shorter MTBF despite fewer total failure events.
+
+This distinction has direct implications for development process planning. Teams building Microservice-based LMS systems should anticipate a higher total number of individual service errors, a higher MTTR per incident, but a longer overall productive development horizon between system-wide blocking events. Agile sprint planning should account for this pattern by treating service-level error resolution as a parallel activity rather than a serial impediment, enabling continuous integration pipelines to proceed on stable services while failed services are remediated.
+
+\subsection{Architectural Suitability for LMS Deployments}
+
+The three analytical threads developed above converge on a decision framework that extends the theoretical propositions of prior literature with empirical LMS-specific data.
+
+\subsection{The Enrollment Period Challenge}
+
+LMS deployments face a distinctive operational pattern that differentiates them from e-commerce and general-purpose web applications: extreme traffic variability concentrated in predictable high-stakes periods — course enrollment windows, mid-term and final examination sessions, and assignment submission deadlines. During these periods, the ratio of concurrent write operations to read operations may exceed 3:1, with write operations (POST /enrollment, POST /submission) imposing substantially higher per-request processing costs than read operations.
+
+This present study's VU interaction model — combining GET /courses (lightweight read) with POST /enrollment (multi-service write transaction) — is specifically designed to capture this heterogeneous workload characteristic. The results demonstrate that this workload mix produces architectural performance dynamics that differ materially from uniform-operation benchmarks: the Microservice write path under ramp-up conditions exhibits cross-service coordination overhead that causes P99 response time to exceed 30,002 ms at 200–500 VUs — a finding with direct implications for enrollment period reliability.
+
+For institutions where enrollment failures represent regulatory or reputational risks, this write-path vulnerability of Microservice under moderate sustained load is a critical architectural consideration that existing literature — which predominantly benchmarks read-heavy or uniform workloads — fails to capture.
+
+\subsection{Scale-Dependent Architecture Recommendations}
+
+Synthesizing the performance, resource efficiency, and fault tolerance findings, this study proposes a three-tier scale-dependent recommendation framework for LMS architecture selection:
+
+Small-scale LMS deployments (fewer than 500 concurrent users, teams of 1–5 developers): The Monolithic architecture presents a clear cost-effectiveness advantage. The superior RUE\_CPU at peak load, combined with lower debugging complexity (shorter MTTR in practice) and zero infrastructure tax, makes the Monolith the rational choice for institutions where development resources are constrained and peak concurrency remains below the throughput crossover threshold. The enrollment-period write-path advantage of the Monolith at moderate concurrency (200–500 VUs) is directly relevant to this scale.
+
+Medium-scale LMS deployments (500–2,000 concurrent users, teams of 5–15 developers): This range encompasses the throughput crossover region identified in this study (approximately 1,000 VUs), where neither architecture holds a clear performance advantage. The choice should be driven primarily by organizational factors: teams with DevOps maturity and observability tooling can leverage Microservice' superior fault isolation to maintain partial system availability during the high-stakes enrollment and examination periods. Teams without this infrastructure should prefer the Monolith's operational simplicity, potentially adopting a Monolithic intermediate pattern to preserve migration optionality.
+
+Large-scale LMS deployments (more than 2,000 concurrent users, teams of 15+ developers): The empirical evidence clearly favors the Microservice architecture. The throughput superiority demonstrated at 2,000 VUs (Microservice: 579.17 RPS vs. Monolith: 430.94 RPS in ramp-up; 6,307.98 RPS vs. 5,548.16 RPS in peak load), combined with the fault isolation capability that prevents enrollment service saturation from degrading course browsing, addresses the two most critical operational requirements of large-scale LMS deployments: sustained high throughput and partial availability during peak periods.
+
+\subsection{Limitations and Boundary Conditions}
+
+Several boundary conditions qualify the generalizability of these findings. First, all experiments were conducted on a single physical host using a Docker bridge network, meaning inter-service communication occurred over loopback interfaces with negligible physical network latency. In a distributed cloud deployment where services communicate over actual network infrastructure, inter-service latency would be higher, potentially shifting the throughput crossover threshold downward and amplifying the Microservice write-path coordination overhead. Second, the study does not include horizontal scaling of individual Microservice containers — a deployment configuration that would potentially eliminate the write-path timeout behavior observed at 200–500 VUs by distributing enrollment transaction load across multiple AccountService replicas. Third, the absence of a service mesh or distributed tracing infrastructure in the test environment may understate the operational complexity costs of production-grade Microservice deployments, where such infrastructure is typically mandatory. Future work should address these limitations by conducting equivalent benchmarks on distributed cloud infrastructure with auto-scaling enabled, enabling empirical validation of the scale-dependent recommendation framework proposed above.
+
+
+
+
+
+

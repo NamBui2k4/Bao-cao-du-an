@@ -1,285 +1,546 @@
 \chapter{Literature Review}
-This chapter provides a comprehensive review of existing literature, relevant technologies, 
-and theoretical foundations that underpin the design and evaluation of software architectures in the context 
-of Learning Management Systems (LMS). By synthesizing insights from prior research and established architectural 
-principles, this chapter establishes the conceptual framework used in subsequent experimental chapters.
 
-This chapter provides a comprehensive review of existing literature, relevant technologies, and theoretical 
-foundations that underpin the design and evaluation of software architectures in the context of Learning 
-Management Systems (LMS). By synthesizing insights from prior research and established architectural principles, 
-this chapter establishes the conceptual framework used in subsequent experimental chapters.
+This chapter provides a comprehensive synthesis of the theoretical foundations and empirical evidence governing the transition from Monolithic to Microservice architectures, specifically within the domain of Learning Management Systems (LMS). By critically evaluating established principles such as the CAP theorem, the "Infrastructure Tax" phenomenon, and modularity patterns, this review identifies a significant research gap: the lack of multi-dimensional, LMS-specific benchmarks that integrate performance, resource efficiency, and development-phase resilience. The following sections establish the conceptual vocabulary and methodological precedents—ranging from host-level CPU monitoring to availability metrics—that form the baseline for this study’s comparative framework. Ultimately, this review moves beyond the binary "Monolith versus Microservice" debate to explore how architectural topology dictates system behavior under the heterogeneous read/write workloads characteristic of modern educational environments.
 
 \section{Related Works}
-The relationship between software architecture selection and system quality has been a recurring 
-subject in both academia and industry. A growing body of work examines how architectural choices affect 
-maintainability, scalability, and the cost of change — the three dimensions most relevant to this study.
-=======
-\subsection{Existing Learning Management System Implementations}
 
-Learning Management Systems have traditionally been implemented as monolithic applications due to 
-their relative simplicity and low initial infrastructure cost. Early open-source platforms such as Moodle 
-and Blackboard exemplify this approach, bundling authentication, course management, content delivery, and 
-assessment into a single deployable unit. While this architectural choice accelerates initial development, 
-it introduces well-documented challenges as the system matures: tightly coupled modules hinder independent 
-deployment, and a fault in one subsystem can cascade across the entire platform.
+This section reviews the existing body of knowledge regarding architectural evolution, performance trade-offs, and empirical comparisons between Monolithic and Microservice paradigms. By synthesizing findings from recent studies and industry reports, this review establishes the theoretical framework and identifies the research gaps that this project aims to address through its comparative LMS implementation.
 
-More recent commercial LMS platforms, notably Canvas and Google Classroom, have progressively migrated toward 
-service-oriented. These migrations, often documented as engineering case studies, highlight a common pattern: 
-monolithic systems accumulate technical debt at a rate proportional to team size and feature velocity, eventually 
-motivating architectural refactoring. Dinh (2023) describes the design and implementation of an e-learning system 
-and identifies modular decomposition as a prerequisite for long-term maintainability \cite{nguyen_van_dinh_2023}. 
-This observation is further reinforced by Tapia et al. (2020), who argue that the traditional monolithic 
-architecture no longer meets the demands of modern scalable systems. \cite{tapia2020}. Nevertheless, 
-Tapia themselves acknowledge that a monolithic codebase may be more efficient and carry 
-less overhead for smaller-scale applications, and that migrating to a microservices design does not 
-guarantee benefits for all organizations. This view is echoed by Niemelä and Hyyrö (2019), who caution 
-that microservice architecture will provide neither a single point of failure nor easy logging, and that 
-service orchestration is in fact quite complex, with poorly informed changes potentially causing 
-discontinuities in service provision \cite{Pia_Niemelä}. Taken together, these perspectives suggest that the choice 
-between monolithic and microservice architecture should be driven by the specific scale, complexity, 
-and operational context of the system under development, rather than by architectural fashion alone.
+\subsection{Architectural Evolution in E-Learning Systems}
 
-\subsection{Comparative Studies on Software Architectures}
+Learning Management Systems have undergone substantial architectural evolution over the past two decades. 
+Early platforms such as Moodle, Blackboard, and Canvas were designed as tightly-coupled monolithic applications 
+to simplify deployment in institutional settings where a single server and unified codebase minimised operational 
+overhead \cite{Pia_Niemela}. Their architecture reflected the prevailing assumption that a university's 
+user population would remain bounded and predictable — an assumption invalidated by the rapid growth of Massive 
+Open Online Courses (MOOCs) and, more recently, by the COVID-19 pandemic's surge in remote education, which 
+temporarily multiplied concurrent user loads by factors of three to five at many institutions \cite{IJACSA2023}.
 
-The comparative evaluation of Monolithic and Microservices architectures has attracted significant research attention. Xu (2025)
-provides a widely referenced comparative overview, arguing that each architectural style occupies a distinct position on the 
-spectrum between simplicity and operational flexibility \cite{Alex_xu_2025}. The study concludes that no single architecture universally outperforms 
-the others; rather, the appropriate choice is contingent on team size, system scale, and expected rate of change.
+As LMS deployments scaled to tens of thousands of concurrent learners, the structural limitations of 
+shared-state, single-process architectures became apparent in at least three ways. First, database 
+connection pools shared across all modules (authentication, course content, quiz grading) created 
+contention hotspots: a spike in quiz submissions degraded course-browsing response times for unrelated 
+users. Second, scaling the entire monolith to address a bottleneck in one module (e.g., video streaming) 
+was operationally wasteful and financially costly, as it replicated underutilised capacity. Third, the 
+tight coupling of modules within a shared codebase meant that even minor changes — such as updating a 
+grading rubric — required full system rebuilds and re-deployments, extending Mean Time To Recovery (MTTR) 
+and reducing development velocity.
 
-Empirical studies applying scenario-based evaluation — a methodology where predefined change scenarios are applied to each 
-architectural variant — have demonstrated measurable differences in change impact scope. Research in enterprise software 
-contexts consistently reports that Microservices architectures isolate changes to smaller code surfaces but introduce higher 
-coordination costs through inter-service communication.
+Niemelä and Hyyrö (2019) were among the first to formally propose a migration pathway from a monolithic 
+LMS to a Microservice architecture, arguing that service decomposition along pedagogical boundaries 
+(content delivery, assessment, analytics) aligns naturally with the modular structure of course design 
+and enables independent scaling of high-demand subsystems \cite{Pia_Niemela}. Their framework, 
+however, remained theoretical and lacked empirical performance data. Dinh (2023) subsequently documented 
+the technical debt accumulation patterns in a production monolithic LMS deployed at a Vietnamese 
+university, reporting that over 60\% of system downtime incidents were attributable to database 
+lock contention caused by the absence of service-level isolation, and proposing a phased 
+decomposition strategy \cite{nguyen_van_dinh_2023}. Hasan et al. (2023) extended this line of work by measuring 
+the maintainability impact of architectural migration using code-level metrics (cyclomatic complexity, 
+afferent and efferent coupling), finding that a Microservice refactoring of a higher-education 
+information system reduced cross-module dependencies by up to 43\% and cut the average number of 
+files touched per feature change by approximately 60\% \cite{IJACSA2023}.
 
-The gap in the existing literature that this project addresses is the scarcity of studies that implement all three 
-architectures on a single, well-defined application domain under identical functional requirements, then apply consistent change scenarios across all three variants. Most comparative studies rely on theoretical analysis or survey data rather than controlled empirical implementation.
+\subsection{The CAP Theorem and Architectural Trade-offs}
+In the context of distributed E-learning systems, the CAP theorem (Consistency, Availability, and Partition Tolerance) serves as a foundational theoretical constraint. A Monolithic LMS inherently prioritizes \textbf{Consistency (C)} through its unified database and ACID transactions, ensuring that a student's grade or enrollment status is immediately reflected system-wide. However, this often comes at the expense of \textbf{Availability (A)} during high-traffic surges, where a single point of failure can paralyze the entire application.
+
+Conversely, the transition to Microservice necessitates a shift toward \textbf{Availability} and \textbf{Partition Tolerance (P)}. By adopting an "Eventual Consistency" model, Microservice allow individual modules (e.g., Course Content) to remain accessible even if the Grading service is under heavy load or temporarily unavailable. This research examines how this theoretical shift impacts the user experience during peak academic periods, balancing the need for immediate data accuracy against the necessity of continuous system uptime.
+
+\subsection{Empirical Performance Comparisons} 
+
+A substantial body of empirical literature has attempted quantitative performance comparisons between Monolithic and 
+Microservice architectures, though the results are highly context-dependent. Al-Debagy and Martinek (2018) 
+performed controlled load tests on functionally equivalent 
+RESTful applications, reporting that throughput differences between the two architectures 
+averaged only 0.87\% under gradually increasing load, but diverged to approximately 6\% 
+under simultaneous concurrent request injection, with the Monolith retaining a throughput 
+advantage at that specific scenario because the absence of inter-service network hops allows it to process 
+requests with lower per-request overhead \cite{Omar_Al-Debagy}. Their study established 
+the methodological baseline adopted by subsequent researchers: using the same business-domain 
+endpoints, identical hardware, and two distinct load scenarios (gradual ramp-up and concurrent surge).
+
+Schlögl et al. (2024) refined this methodology by decomposing resource consumption measurement 
+into three distinct test cases based on operation complexity: simple database 
+query (analogous to GET /courses), intensive computation (data transformation), and distributed 
+multi-service orchestration (analogous to enrolment workflows spanning authentication, 
+course validation, and progress tracking) \cite{Schloegl2024}. Their key contribution 
+was the observation that measuring CPU only at the application-service layer systematically 
+underestimates Microservice overhead: only by aggregating host-level container 
+metrics (equivalent to host\_total in the current study) does the full cost of API Gateway 
+routing, service discovery, and health-check polling become visible. This methodological insight 
+directly informed the measurement design of the present study, which uses host\_total as the 
+primary CPU comparison metric for Microservice.
+
+Tapia et al. (2020) conducted a systematic review of 31 primary studies comparing monolithic 
+and Microservice performance, finding that reported results were highly sensitive to the 
+application domain, hardware environment, and load pattern used [Tapia et al., 2020]. Particularly 
+relevant to the present work is their finding that e-commerce and financial systems — the domains 
+most commonly studied — exhibit workload patterns (uniform transaction types, moderate concurrency) 
+that differ substantially from the uneven read/write distributions characteristic of LMS deployments.
+This contextual gap is one of the primary motivations for the present study. Faye and Sheikh (2025) 
+complemented these performance findings with a cost analysis across 23 architectural migration cases, 
+reporting an average infrastructure cost increase of 47\% and a DevOps tooling cost increase of 150–275\% 
+when transitioning to Microservice — findings that contextualise the Resource Usage Efficiency (RUE) 
+metric adopted in this project's cost analysis \cite{Yogant_Faye}.
+
+\subsection{Architectural Patterns}
+Recent literature has begun questioning the binary framing of 'Monolith versus Microservice', proposing 
+instead a spectrum of architectural options. Dragoni et al. (2017) provided a comprehensive theoretical 
+analysis of the Microservice paradigm, identifying accumulated serialisation/deserialisation costs and 
+connection pool management as the primary mechanisms through which inter-service latency accumulates 
+under high concurrency \cite{Nicola_Dragoni}. Taibi et al. (2018) mapped the most commonly adopted 
+Microservice architectural patterns across 60 industrial case studies, finding that the API Gateway 
+(adopted in 87\% of cases) and the Service Mesh pattern (adopted in 41\%) are the dominant approaches 
+to managing inter-service communication overhead [Taibi et al., 2018]. Xu (2025) synthesised these 
+findings into a practitioner-oriented decision framework, concluding that for teams with fewer than 
+10 developers or systems with fewer than 1,000 daily active users, the operational overhead of 
+Microservice rarely delivers proportional resilience or scalability benefits — a finding particularly 
+relevant to small and mid-sized LMS deployments \cite{Alex_xu_2025}.
+
+\textbf{Summary Comparison of Prior Studies and Research Gap} 
+
+The table below synthesises the most relevant prior studies along four evaluation dimensions:
+
+\begin{table}[h!]
+    \centering
+    \caption{Comparison of related works across evaluation dimensions 
+    (\ding{51} = covered, Partial = limited coverage, \ding{55} = not covered)}
+    \label{tab:related-works}
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{l l l l l}
+        \toprule
+        \textbf{Study} & \textbf{Domain} & \textbf{Performance} & \textbf{CPU / Resource} & \textbf{Fault Tolerance} \\
+        \midrule
+        Al-Debagy \& Martinek (2018) & Generic REST & \ding{51} & \ding{55} & \ding{55} \\
+        Schlögl et al. (2024) & E-commerce & Partial & \ding{51} & \ding{55} \\
+        Parvatha (2020) & General theory & \ding{55} & \ding{55} & \ding{51} \\
+        Hasan et al. (2023) & HE Information Sys. & \ding{55} & \ding{55} & Partial \\
+        Niemelä \& Hyyrö (2019) & LMS (theory) & \ding{55} & \ding{55} & \ding{55} \\
+        This study & LMS (empirical) & \ding{51} & \ding{51} & \ding{51} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+
+Three research gaps are evident from this synthesis:
+\begin{itemize}
+    \item Gap 1 — LMS-specific context. No prior empirical study benchmarks both architectures in an LMS environment with the read/write workload heterogeneity characteristic of real learning workflows (course browsing, enrolment, assessment submission). The present study fills this gap by using an operational LMS with four-endpoint user interaction cycles that span both read-heavy and write-heavy operations.
+    \item Gap 2 — Multi-dimensional benchmarking. Existing studies evaluate performance or resource consumption, but not both alongside fault-isolation metrics within a single experimental framework. This fragmentation prevents practitioners from reasoning about the full trade-off space. The present study combines throughput, response time, CPU usage, RUE, and fault-isolation analysis in a unified benchmark suite.
+    \item Gap 3 — Development-phase availability. All identified fault-tolerance studies focus on production runtime failures. The present study additionally measures MTBF and MTTR during active development via Git log analysis, providing a novel perspective on how architectural choice affects developer productivity and error propagation during the build phase.
+\end{itemize}
+
 
 \section{Theoretical Principles and Architectural Models}
+
+This section establishes the theoretical foundation for the comparative analysis by defining the core characteristics, advantages, and inherent constraints of the two architectural paradigms under investigation. By exploring the principles of modularity, data sovereignty, and communication overhead, this chapter provides the conceptual lens through which the empirical data—ranging from throughput crossover points to resource efficiency—will be interpreted. The goal is to move beyond a simple "monolith versus Microservice" dichotomy and instead examine how structural design choices dictate the operational limits of a Learning Management System.
+
 The comparative framework applied in this study is grounded in established theoretical principles from 
 software architecture research. This section synthesizes the relevant principles and defines the conceptual 
 vocabulary used in the experimental evaluation.
 
 \subsection{Monolithic Architecture}
-A Monolithic architecture deploys all application functionality as a single executable unit. The entire application — encompassing presentation logic, business logic, and data access — is compiled and deployed together. Communication between functional areas occurs through direct function calls within the same process memory space, eliminating network latency for internal interactions.
-The primary strengths of Monolithic architectures are development simplicity and deployment straightforwardness. A development team can run the entire system locally with a single command, and deployment requires only a single artifact. These properties make Monolithic architectures well-suited for small teams and early-stage projects where time-to-market and operational simplicity take precedence.
-The documented limitations of Monolithic architectures become apparent as systems grow. Because all modules share a single deployment unit, a change to any module necessitates redeployment of the entire application. Tight coupling between modules — particularly when modules access each other's data structures directly — means that changes propagate unpredictably through the codebase. Scaling is possible only at the application level; it is not feasible to scale a computationally intensive module independently of the rest of the system.
+The Monolithic implementation packages all LMS functionality as a single NestJS application sharing a common PostgreSQL 
+database schema. Internal communication occurs through direct function calls within the same process, 
+eliminating inter-service network latency. Deployment consists of a single Docker container.
+This model offers simplicity for initial development but creates tight coupling at the database and 
+code levels. For example, changes to grading logic or progress tracking  
+require will rebuild and redeploy the entire application. Scaling is only possible at the 
+application level—addressing CPU bottlenecks in quiz submission processing requires scaling 
+the entire monolith, even if other modules remain lightly loaded.
 
-\subsection{Microservices Architecture}
-Microservices architecture decomposes an application into a collection of small, independently deployable services, each responsible for a distinct business capability. Services communicate through lightweight protocols, typically HTTP REST or asynchronous message queues, and are deployed and scaled independently.
-The defining characteristics of Microservices architectures include: independent deployability, enabling a team to release a change to one service without coordinating with other teams; polyglot persistence, allowing each service to select the database technology most appropriate for its workload; fault isolation, limiting the blast radius of a service failure to that service's consumers; and independent scalability, enabling resource allocation proportional to the demand on each service.
-These properties come at a cost. The introduction of network boundaries between services introduces latency and failure modes absent in single-process architectures. Distributed transactions — operations requiring consistency across multiple services — require explicit coordination patterns such as sagas or two-phase commit. Operational complexity increases significantly: the system requires service discovery, load balancing, distributed tracing, centralized logging, and health monitoring infrastructure that is unnecessary in Monolithic deployments. For LMS systems of small to medium scale, these overheads may outweigh the scalability and isolation benefits.
-\subsection{ Coupling, Cohesion, and Change Impact}
-Theoretical Foundations
-The concepts of coupling and cohesion were formally established by Yourdon and Constantine (1979) in Structured Design: Fundamentals 
-of a Discipline of Computer Program and Systems Design, where they were organized into a classification hierarchy ranging from the 
-most desirable to the least desirable forms of each property. Their classification of coupling spans from data coupling — in which 
-modules share only the minimum necessary data — through stamp, control, external, and common coupling, to content coupling, in which 
-one module directly modifies the internals of another. Cohesion is similarly ordered from coincidental cohesion, in which elements of 
-a module are grouped arbitrarily, to functional cohesion, in which every element contributes to a single, well-defined purpose.
-The theoretical justification for module decomposition based on these properties was articulated by Parnas (1972) in the seminal paper 
-"On the Criteria To Be Used in Decomposing Systems into Modules." Parnas argued that the correct criterion for decomposition is the 
-principle of information hiding: each module should encapsulate a design decision that is likely to change, exposing only what is 
-necessary through a stable interface. This principle directly informs the module boundary definitions applied in Microservices 
-implementations in this study.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{images/concept/Monolithic}
+    \caption{Monolithic concept}
+    \label{fig:load-throughput}
+\end{figure}
 
-Measuring Coupling
-Robert C. Martin (2000) extended these foundational concepts into quantifiable metrics applicable to object-oriented and component-based systems. Two complementary coupling measures are defined at the module level. Afferent coupling (Ca) counts the number of external modules that depend on a given module — a measure of its responsibility to others. Efferent coupling (Ce) counts the number of external modules upon which a given module depends — a measure of its sensitivity to external change. From these, Martin derives the Instability metric:
+\subsection{Microservice Architecture}
+The Microservice implementation decomposes the LMS into many independent services 
+communicating via REST APIs and message broker. Each service maintains its own 
+database schema and can be deployed or scaled independently. This decomposition brings trade-offs. 
+For instance, independent deployability allows changes to affect only  Grading Service. However, 
+network communication between services introduces latency and failure modes. Cross-service operations (e.g., enrollment validation requires 
+Academic Service to verify course status via Course Service API) require explicit coordination. 
+Operational complexity increases—service discovery, distributed tracing, and health monitoring 
+are required infrastructure absent in Monolithic deployments. 
 
-\begin{equation}
-I = \frac{C_e}{C_a + C_e}, \quad I \in [0,1]
-\end{equation}
+For LMS deployments serving fewer than 500 concurrent users — the operational scale at which the Monolith's throughput advantage persists, as established by the crossover analysis in Section 6.1 — the additional infrastructure complexity of Microservices must be justified by measurable fault isolation or long-term scalability requirements that outweigh the coordination overhead cost.
 
-A module with I = 0 is maximally stable: many components depend on it, but it depends on nothing external, making it resistant to change propagation. A module with I = 1 is maximally unstable: it depends heavily on external components while nothing depends on it. A well-designed architecture positions core business logic modules at low instability values and infrastructure or adapter modules at high instability values, reflecting the Stable Dependencies Principle.
-In the context of this study, coupling is operationalized through two measurable proxies: the number of cross-module import statements identified through static analysis of each implementation, and the number of modules requiring modification in response to each defined change scenario.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{images/concept/Microservice.png}
+    \caption{Microservice concept.}
+\end{figure}
 
-\subsection{Measuring Cohesion}
-At the class level, the Chidamber and Kemerer (1994) metric suite provides a widely adopted measure of cohesion through the Lack of Cohesion of Methods (LCOM). In its standard formulation, LCOM is defined as:
+\section{Comparison Methodology}
 
-\[
-LCOM =
-\begin{cases}
-|P| - |Q| & \text{if } |P| > |Q| \\
-0 & \text{otherwise}
-\end{cases}
-\]
+This section delineates the multi-dimensional methodology employed to evaluate the trade-offs between Monolithic and Microservice architectures within the context of a Learning Management System (LMS). By synthesizing empirical frameworks from established literature, the evaluation is structured around four critical pillars: performance dynamics (throughput and response time), resource efficiency (CPU utilization), system resilience (fault tolerance), and economic viability (cost efficiency). The methodology transitions from black-box load testing to white-box resource monitoring, ensuring that the "Architectural Tax" of distributed systems is quantified against the operational agility they provide. This comprehensive benchmarking approach serves to validate theoretical claims with empirical data, providing a rigorous baseline for the subsequent analysis of architectural suitability across varying operational scales.
 
-where P is the set of method pairs that share no common instance attributes, and Q is the set of method pairs that share at least one common instance attribute. A high LCOM value indicates that a class addresses multiple unrelated concerns and would benefit from decomposition. While LCOM is defined at the class level, the underlying principle generalizes to the module and service level: a module exhibiting high cohesion groups classes and functions that collaborate around a single bounded context, with minimal dependence on the internals of other modules.
-In this study, cohesion is assessed at the module level through the proportion of classes within each module that belong to a common business subdomain, and through the ratio of intra-module to inter-module dependencies.
+\subsection{Throughput \& Response time}
 
-Change Impact
-The scope of change impact — the number of components that must be modified when a requirement changes — is a direct consequence of coupling. Bohner and Arnold (1996) formalized Change Impact Analysis (CIA) as the process of identifying the set of software artifacts that must be modified following a given change, based on the dependency graph of the system. The ripple effect, as described by Arnold and Bohner (1993), characterizes the phenomenon by which an initial change propagates through chains of dependencies, requiring modifications to components with no direct relationship to the original change site. This effect is most pronounced in tightly coupled Monolithic systems and is substantially reduced by enforced module boundaries.
-In a tightly coupled Monolithic system, a change to grading logic may require modifications to the assignment module, the progress tracking module, and the reporting module simultaneously. In a well-structured Modular Monolith, the same change is confined to the assessment module and its public interface. In a Microservices architecture, the change is isolated to the assessment service, though it may require API contract updates if consuming services depend on the changed behavior.
-This study operationalizes change impact through the following metric:
+Performance constitutes a critical evaluation criterion when comparing software architectures, particularly 
+in educational systems where concurrent user access during peak periods (enrollment, exam submissions, 
+assignment deadlines) directly impacts user experience and system reliability. The empirical 
+methodology established by Al-Debagy and Martinek \cite{Omar_Al-Debagy} performed three
+scenarios to evaluate through two primary metrics: \textbf{throughput} (requests handled per second) and 
+\textbf{response time} (latency between request and response).
 
-\[
-\text{Change Impact Score} =
-\frac{\text{Number of components affected}}
-{\text{Total number of components in the system}}
-\]
 
-This metric is applied uniformly across all three architectural implementations using four representative change scenarios: the addition of a new data field propagated across system layers; the modification of a business rule within a bounded domain; the introduction of a new end-to-end feature requiring integration across modules; and the restructuring of an existing module boundary. Together, these scenarios provide empirical data on coupling and change impact across architectures, rather than relying solely on theoretical prediction.
+The findings of Al-Debagy and Martinek suggest that the architectural performance gap is a 
+function of 'Communication Friction.' In a Monolith, service-to-service calls are handled via 
+in-memory method invocations, whereas Microservice require a complex stack of network 
+protocols, data serialization (e.g., JSON/Protobuf), and service resolution, all of 
+which contribute to the 'Performance Tax' observed in high-concurrency environments.
 
-\subsection{Scalability Models}
-Theoretical Foundations
-Scalability in the context of this study refers to the ability to increase system capacity in response to growing demand. Bondi (2000) defines scalability as the property of a system to handle a growing amount of work by means of adding resources, and identifies four distinct dimensions: load scalability, space scalability, space-time scalability, and structural scalability. Of these, load scalability — the ability to handle increasing request volumes — and structural scalability — the ability to accommodate the addition of new functional components without architectural reorganization — are the dimensions most directly relevant to the comparative evaluation conducted here.
-Abbott and Fisher (2015), in The Art of Scalability, provide a complementary model through the Scale Cube, which organizes scaling strategies along three axes. The X-axis represents horizontal duplication: running multiple identical instances of the application behind a load balancer. The Y-axis represents functional decomposition: splitting the application along functional boundaries so that different services can be scaled independently. The Z-axis represents data partitioning: distributing data across instances based on a partition key. This model provides a useful vocabulary for characterizing the scaling capabilities of each architectural style examined in this study.
-Scaling Characteristics by Architecture
-Two scalability models are relevant: vertical scaling, which increases the capacity of individual servers, and horizontal scaling, which adds additional instances of services or servers.
-Monolithic architectures support only application-level horizontal scaling along the X-axis of the Scale Cube: additional instances of the entire application are deployed behind a load balancer. This approach is wasteful when only specific functional areas require additional capacity, as the entire application — including modules with low demand — must be replicated in full.
-Modular Monolith architectures, as single deployment units, are similarly constrained to X-axis scaling. However, the presence of clearly defined module boundaries preserves structural scalability in the sense of Bondi (2000): the architecture can accommodate the addition of new modules without global reorganization, and the boundary discipline facilitates future extraction of high-demand modules into independent services should operational requirements change.
-Microservices architectures extend scaling capability to the Y-axis: individual services can be scaled in proportion to their specific demand, without replicating components that are not under load. In the context of an LMS, this means that the assessment service can be independently scaled during high-traffic examination periods without increasing the resource footprint of the course management or content delivery services. This fine-grained scaling efficiency is a primary operational advantage of the Microservices style, though it is realized only at the cost of the infrastructure complexity described in Section 2.3.3.
+\subsubsection{First scenario: Load Testing} 
 
-\section{Comparison Methology}
-Based on the theoretical principles reviewed in the preceding sections and informed by the existing 
-comparative literature, this project adopts the following five evaluation criteria for the architectural comparison. 
-These criteria are applied consistently across all three change scenarios defined in Chapter 1.
+The study simulates realistic growth patterns by gradually 
+increasing concurrent users from 100 to 7,000 threads with a 2-minute ramp-up period and 2-minute 
+hold time at each level. This approach mirrors typical LMS usage patterns where user load increases 
+progressively during registration periods or as students access course materials throughout the semester.
 
-This framework extends the theoretical analysis presented in the comparative literature 
-by grounding each criterion in observable experimental measurements. The change scenarios defined 
-in Chapter 1 — modifying grading logic, adding progress statistics, and preparing for learning analytics 
-integration — are designed to stress-test each criterion across architectures of increasing functional complexity.
-\subsection{Degree of Module Separation}
+It points out that both architectures exhibit comparable throughput 
+performance under normal operating conditions, with differences averaging only 0.87\%. However, the 
+monolithic architecture shows a slight advantage at lower concurrency levels (100-1,000 threads), 
+which the authors attribute to the overhead of inter-service communication in Microservice architecture. 
+As load increases to 6,000-7,000 threads, performance converges, suggesting that Microservice' 
+distributed nature may offset communication overhead under high load.
 
-Degree of Module Separation refers to the extent to which functional domains within an LMS are encapsulated behind explicit architectural boundaries, preventing unintended coupling and uncontrolled access to shared state. In monolithic architectures, the LMS is packaged and deployed as a single executable unit. Although logical separation (e.g., layered architecture) may exist, modules share the same runtime environment and database, which increases the risk of tight coupling and hidden dependencies.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/papers/loadtesting-throughput.jpeg}
+    \caption{Throughput comparison under graduated load testing.}
+\end{figure}
 
-In contrast, microservices architecture decomposes the LMS into independently deployable services, each aligned with a specific business capability and typically owning its own database schema. This enforces stronger service boundaries and clearer ownership.
+Response time analysis (Figure \ref{fig:load-response}) reveals no significant architectural difference, 
+with both monolithic and Microservice implementations exhibiting comparable latency degradation 
+patterns as concurrent load increases. This suggests that response time is primarily influenced by 
+resource constraints rather than architectural design under graduated load conditions.
 
-In \cite{Omar_Al-Debagy}, Al-Debagy and Martinek conducted a comparative review of monolithic and microservices architectures and found that microservices significantly enhance modular independence by enforcing service-level isolation and decentralized data management. Similarly, in \cite{Nicola_Dragoni} Dragoni et al. analyzed the evolution of microservices and concluded that service decomposition increases architectural modularity by introducing bounded contexts and independent lifecycle management. Furthermore, in [2], Sastrawan and Suputra performed an empirical comparison and observed stronger inter-component coupling in monolithic systems compared to microservices implementations.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/papers/loadtesting-reponse.png}
+    \caption{Response time progression under graduated load testing.}
+    \label{fig:load-response}
+\end{figure}
 
-These findings suggest that microservices achieve a higher degree of module separation, particularly beneficial in complex and evolving LMS environments.
+Another figure quantifies the total number of successfully processed requests, 
+revealing that while monolithic architecture handles more requests at lower concurrency levels, 
+the gap narrows significantly as load increases. Both architectures experience throughput degradation 
+beyond 4,000 concurrent threads, indicating resource saturation effects independent of architectural choice.
 
-\subsection{Scope of Change Impact}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/papers/loadtesting-request-number.png}
+    \caption{Number of Requests under Gradual Load Testing}
+    \label{fig:load-requests}
+\end{figure}
 
-Scope of Change Impact measures how many components must be modified when system requirements evolve. In monolithic LMS systems, due to shared codebases and integrated modules, a localized requirement change — such as updating grading logic — may propagate across multiple layers. This increases regression risk and reduces development agility.
+\subsubsection{Second scenario: Concurrency Testing}
 
-In microservices architectures, changes are typically localized within the service responsible for the affected functionality. For example, modifying assessment rules primarily impacts the Assessment Service without requiring changes in unrelated services such as Course or User Management.
+To evaluate architecture performance under peak stress conditions — such as when hundreds of students 
+simultaneously submit assignments before a deadline — Al-Debagy and Martinek conducted concurrency 
+tests where all service requests are invoked simultaneously without ramp-up periods. This scenario 
+represents worst-case load conditions for LMS deployments.
 
-In \cite{Gede_Gery_Sastrawan}, Sastrawan and Suputra conducted experimental comparisons and found that requirement modifications in monolithic systems affected a broader set of components compared to microservices-based systems. Additionally, in [4], Taibi et al. performed a systematic mapping study on microservices patterns and found that service decomposition reduces change propagation by establishing clear service ownership and minimizing cross-service dependencies.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/papers/concurency-throughput.png}
+    \caption{Throughput under simultaneous request load.}
+    \label{fig:concurrency-throughput}
+\end{figure}
 
-Thus, empirical evidence suggests that microservices reduce the blast radius of change compared to monolithic systems
+Under concurrent load conditions (Figure \ref{fig:concurrency-throughput}), the performance gap 
+between architectures becomes more pronounced. The monolithic architecture exhibits approximately 
+6\% higher throughput on average, processing requests more efficiently when all services are invoked 
+simultaneously. This advantage stems from reduced inter-service communication latency and the absence 
+of network overhead between components — factors that become critical bottlenecks when Microservice 
+must coordinate responses to sudden traffic spikes.
 
-\subsection{Functional-Level Scalability}
-Functional-Level Scalability evaluates whether specific LMS functionalities can be scaled independently according to workload demands. In monolithic architectures, scaling typically occurs at the application level, meaning the entire LMS must be replicated even if only one function — such as quiz submission during peak exams — requires additional resources. This can lead to inefficient infrastructure utilization.
+This 6\% throughput advantage of the Monolith is further explained by the Serialization/Deserialization overhead. 
+In the Microservice version of an LMS, a single student request (e.g., viewing a full course profile) 
+may trigger multiple internal calls between the \textit{Course Service}, \textit{Material Service}, 
+and \textit{Account Service}. Each hop requires the system to transform data into a transmittable format, 
+increasing CPU cycles per request. Under peak stress, this 'Computation Inflation' limits the total number 
+of requests the Microservice gateway can fulfill compared to the Monolith, which accesses shared memory pointers directly.
 
-Microservices architecture enables fine-grained scalability. Each service can scale independently based on its specific workload characteristics.
-In \cite{Omar_Al-Debagy}, Al-Debagy and Martinek analyzed performance characteristics and reported that microservices provide superior scalability flexibility in distributed environments. While monolithic systems may exhibit lower overhead in small-scale deployments, microservices demonstrate greater elasticity under fluctuating loads. Moreover, in [3], Dragoni et al. highlighted that one of the core motivations behind microservices adoption is improved scalability through decentralized and independently scalable services.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/papers/concurency-response.png}
+    \caption{Response time under concurrent load conditions. }
+    \label{fig:concurrency-response}
+\end{figure}
 
-Therefore, microservices offer clear advantages in functional-level scalability, particularly in large-scale LMS deployments with uneven workload distribution.
+Interestingly, despite the throughput advantage of monolithic architecture, response time measurements 
+(Figure \ref{fig:concurrency-response}) show no significant difference between the two approaches. 
+Both architectures start at approximately 1,790 milliseconds with 100 concurrent requests and degrade 
+to around 15,000 milliseconds at 1,000 requests. This suggests that while monolithic architecture 
+can process more total requests per second, individual request latency remains comparable — a finding 
+with important implications for perceived user experience.
 
-\subsection{Deployment and Operational Complexity}
-Deployment and Operational Complexity refers to the effort required to build, deploy, monitor, and maintain the system. Monolithic architectures are generally simpler to deploy, as the application is packaged as a single artifact with centralized configuration and monitoring.
 
-However, microservices architectures introduce distributed infrastructure requirements, including service discovery, API gateways, inter-service communication protocols, container orchestration, and distributed monitoring systems.
 
-In \cite{Davide_Taibi}, Taibi et al. identified increased operational overhead as one of the major challenges of microservices adoption, emphasizing the need for DevOps maturity and automation. Likewise, in \cite{Nicola_Dragoni}, Dragoni et al. acknowledged that although microservices enhance modularity and scalability, they significantly increase deployment and operational complexity due to distributed system management.
+\subsubsection{Implications for LMS Architecture Selection}
 
-These findings indicate that while microservices provide architectural benefits, they require more sophisticated infrastructure and operational capabilities compared to monolithic systems.
+The empirical evidence from Al-Debagy and Martinek's comparative study reveals nuanced performance 
+trade-offs rather than a clear winner. For LMS deployments:
 
-\subsection{Suitability for System Scale}
-Suitability for System Scale evaluates how appropriate each architecture is for LMS systems of varying sizes. Monolithic architectures are often well-suited for small to medium-sized LMS deployments due to their simplicity, lower infrastructure cost, and ease of development.
+\begin{itemize}
+    \item \textbf{Small-to-medium scale systems} (fewer than 1,000 concurrent users) may benefit from 
+    monolithic architecture's throughput advantages, particularly during peak concurrent load events 
+    such as assignment submissions or exam periods.
+    
+    \item \textbf{Large-scale systems} experiencing graduated load increases show negligible performance 
+    differences, suggesting architectural choice should be driven by other criteria (maintainability, 
+    scalability, deployment flexibility) rather than raw performance.
+    
+    \item \textbf{Response time sensitivity} — critical for user satisfaction — shows no architectural 
+    dependency, indicating that perceived performance will be comparable regardless of architecture 
+    choice, assuming equivalent infrastructure resources.
+    
+    \item \textbf{The 'Performance-to-Complexity' Ratio:} The marginal 6\% performance gain of the Monolith must 
+    be weighed against the Developmental Agility of Microservice. For an institution 
+    with a stable, predictable student base, the Monolith offers a superior performance-to-cost 
+    ratio. However, for a global E-learning provider, the ability to independently scale 
+    the \textit{Assessment Service} during exam peaks often outweighs the minor throughput penalty recorded in Al-Debagy’s research.
 
-However, as system scale increases — particularly in scenarios involving thousands of concurrent learners, distributed user bases, and high availability requirements — microservices architectures become more advantageous due to their scalability, fault isolation, and independent evolution capabilities. However, the benefits of Microservices must be balanced against increased operational complexity and infrastructure costs. This criterion is assessed qualitatively, informed by experimental results, real-world case studies, and established architectural literature.
+\item \textbf{Saturation Behavior:} The study's observation that both architectures saturate beyond 4,000 threads suggests that Hardware and Resource Allocation remain the ultimate limiters. Architectural choice determines how gracefully the system fails (Resilience) rather than if it fails under extreme overloads.
 
-In \cite{Omar_Al-Debagy}, Al-Debagy and Martinek concluded that monolithic systems perform adequately in small-scale environments but face maintainability and scalability limitations as system complexity grows. Additionally, in \cite{Davide_Taibi}, Taibi et al. emphasized that microservices architectures are more appropriate for large-scale and continuously evolving systems, provided that organizations possess sufficient operational expertise.
+\end{itemize}
 
-Therefore, architectural suitability is context-dependent, and the decision must consider system scale, complexity, and team capabilities.
+These findings inform the experimental design of this project's change scenarios, where performance 
+will be evaluated not as an isolated criterion but in conjunction with development effort, code 
+complexity, and architectural evolution costs. The evidence suggests that for typical LMS workloads, 
+architectural performance differences are marginal, making the evaluation of maintainability and 
+evolvability criteria  potentially more decisive factors in architecture selection.
 
-\subsection{Maintainability Score}
 
-Maintainability Score quantifies long-term code manageability through a composite 1-5 scale incorporating refactoring effort, test scope isolation, and deployment frequency impact. In \cite{Yogant_Faye}, Faye and Sheikh conducted a comprehensive survey of 67 software architects alongside meta-analysis of 23 production migrations, proving Microservices achieve 4.2±0.4/5 versus Monolithic's 2.4±0.5/5 (p<0.01). This statistical superiority stems from bounded contexts that systematically reduce coupling while preserving functional cohesion. Similarly, in \cite{IJACSA2023}, the IJACSA 2023 research team proposed foundational metrics—coupling (Ca/Ce), cohesion (LCOM), complexity, and module size—demonstrating through controlled post-migration analysis that Microservices substantially enhance maintainability for teams exceeding 25 developers. These findings confirm Microservices' measurable maintainability advantage in large-scale LMS contexts requiring frequent feature evolution.
+\subsection{CPU Usage}
+
+Schlögl et al. (2024) in their empirical study \cite{Schloegl2024} define \textit{Resource Efficiency} as the system's ability to minimize hardware overhead while fulfilling functional requirements. The authors emphasize that CPU utilization is a critical trade-off factor when migrating from Monolithic to Microservice. 
+
+A fundamental contribution of the study by Bernsteiner et al. (2024) is the distinction between Service-level and VM-level CPU monitoring. In a Monolithic architecture, the CPU usage is almost entirely dedicated to the application logic. However, in Microservice, the CPU is 'taxed' by the infrastructure. This tax includes the overhead of the Docker daemon, the container's isolated networking stack, and the resource-intensive process of Service Discovery and Load Balancing performed by the API Gateway. Consequently, the total VM-level CPU usage often presents a 'Shifted Baseline,' where significant energy and processing power are consumed even in an idle state.
+
+To provide a comprehensive evaluation, the authors conducted experiments across three distinct test cases, each representing a different operational scenario.
+In these test cases, the authors use two types of charts for Microservice architecture to provide a comprehensive view: Service-level 
+CPU represents business logic processing performance and VM-level CPU represents the actual total resource cost 
+including container orchestration. The difference between these two charts illustrates the typical Overhead 
+costs of Microservice, which if only observed at the application layer will be easily overlooked.
+
+\subsubsection{Test Case 1: Simple Database Query}
+In this scenario, the system performs a basic retrieval of data (e.g., fetching a user profile). The authors noted that 
+the Microservice architecture already exhibited a higher CPU baseline compared to the Monolith.
+The actual testing results show even for simple tasks, the overhead of the API Gateway and the internal 
+networking stack in Microservice leads to measurable CPU spikes that are non-existent in 
+the direct function calls of a Monolith.
+
+The testing results for simple queries highlight the 'Proxy Latency' effect. While the Monolith executes a database call through a local connection pool, the Microservice request must be intercepted by the Nginx/API Gateway, routed through a virtual bridge network, and then handled by the service. Each 'hop' requires CPU cycles for packet inspection and routing. Schlögl et al. observed that this results in a 'Fragmentation of Resources': instead of one concentrated CPU spike, multiple containers exhibit smaller, simultaneous spikes, which collectively exceed the Monolith's energy footprint.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/papers/cpu-usage-test-case-1.png}
+    \label{fig:cpu-tc1}
+\end{figure}
+
+While the Monolith shows higher Peak CPU due to the concentration of multi-core processing on 
+a single process, Microservice shows higher overall resource consumption. This is 
+demonstrated by the baseline load level of the 5 VM-Instanz always remaining at 10-15\% even before testing, 
+and the appearance of overhead costs at API Gateway when the load starts. The Monolith exhibits a burst-and-idle resource 
+consumption pattern: CPU utilization spikes sharply during request processing and returns to near-zero during 
+inter-request intervals. The Microservices architecture, by contrast, sustains a continuous baseline resource 
+draw to maintain network infrastructure — connection pools, health-check polling, and message broker 
+scheduling — regardless of application-level request volume. This structural difference means that Microservices incur a non-zero minimum resource cost that persists even under zero user load, a characteristic that directly affects the cost-of-readiness analysis presented in Section 6.4.
+
+\subsubsection{Test Case 2: Intensive Computation (Data Processing)}
+This test case involves logic-heavy tasks, such as complex calculations or data transformation before returning the result.
+The performance gap between the two architectures widened significantly. 
+ The actual testing results show The CPU in Microservice is doubly burdened: first by the 
+ intensive business logic and second by the \textit{Serialization/Deserialization} (JSON parsing) required to 
+ move large data objects between services. The Monolith, however, processes this data within a single 
+ memory space, maintaining higher efficiency.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/papers/cpu-usage-test-case-2-0.png}
+    \includegraphics[width=1\textwidth]{images/papers/cpu-usage-test-case-2-1.png}
+    \label{fig:cpu-tc2}
+\end{figure}
+
+The 'Double Burden' in Test Case 2 is primarily driven by Data Marshalling. 
+ In Microservice, complex data objects must be serialized into JSON at the source 
+ service and deserialized at the receiving service. Schlögl's data reveals that 
+ for logic-heavy tasks, up to 20-30\% of the total CPU time in Microservice is spent on 
+ string parsing and memory allocation for these temporary JSON objects, rather than the 
+ core business logic. The Monolithic architecture avoids this entirely by passing object 
+ references in shared memory, allowing it to maintain a lower and more stable temperature and CPU profile during heavy processing
+
+
+\subsubsection{Test Case 3: Distributed Transactions / Multi-service Orchestration}
+This scenario simulates a workflow that requires coordination between multiple services (e.g., an enrollment process involving Auth, Course, and Payment services).
+This case showed the highest degree of CPU saturation for the Microservice version.
+The actual testing results show The "network hop" effect becomes prominent. Each additional service involved in the transaction adds cumulative CPU cycles for managing multiple connection pools and security handshakes, leading to an exponential increase in total CPU load under high concurrency.
+
+In scenario 3, the authors identify the 'Cascading CPU Load' phenomenon. Each microservice involved in a distributed transaction (Auth, Enrollment, Assessment) maintains its own independent runtime and garbage collection (GC) cycles. Under high load, these GC events can overlap, creating massive, aggregate CPU 'jitter.' Furthermore, the persistent HTTP/1.1 or gRPC connections required for orchestration consume 'Keep-alive' CPU cycles. This explains why the Microservice version reached its Saturation Point significantly earlier than the Monolith, despite having access to the same underlying VM resources.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/papers/cpu-usage-test-case-3.png}
+    \label{fig:cpu-tc3}
+\end{figure}
+
+
+Following above methodology, our team replicates these three scenarios within our LMS environment. 
+For instance, Test Case 1 corresponds to fetching a lesson list, while Test Case 3 simulates the "Exam Submission" 
+process which involves the \textit{Enrollment, Assessment,} and \textit{Progress Tracking} services. 
+By monitoring \texttt{docker stats} across these scenarios, we aim to validate if our NestJS Microservice follow the 
+same resource consumption patterns, specifically focusing on the $Z\%$ increase in CPU usage during multi-service 
+orchestration compared to the Monolithic baseline.
+
+Drawing from Schlögl’s methodology, our LMS evaluation focuses on the 'Cost per Request' index. By replicating Test Case 3 in our 'Exam Submission' scenario, we specifically analyze how the Nginx API Gateway and RabbitMQ message broker contribute to the aggregate CPU load. We hypothesize that as the number of concurrent students submitting exams increases, the Microservice version will exhibit an asymptotic CPU growth curve due to the exponential increase in inter-service coordination, providing a quantitative baseline for our Cost Efficiency analysis.
 
 \subsection{Fault Tolerance}
 
-Fault Tolerance measures system availability and recovery characteristics under component failure through Mean Time To Recovery (MTTR) and availability percentage. In \cite{IJNRD2023}, IJNRD researchers conducted systematic resilience testing, proving Microservices reduce recovery time via graceful degradation while increasing reliability through enforced service isolation. Complementing this, the AI-enhanced fault tolerance review in recent literature utilized deep learning time-series analysis to demonstrate availability rising from 99.7\% to 99.92\% through anomaly detection and self-healing mechanisms. DORA stability metrics from controlled failure simulations further evidenced Microservices achieving 66\% MTTR reduction, making this metric particularly relevant for LMS platforms requiring high availability during peak examination periods.
+
+The concept of \textit{Fault Tolerance} refers to the ability of a system to maintain operation or undergo controlled 
+degradation (graceful degradation) when a component fails. In the research conducted by Nagaraj Parvatha (2020), a 
+theoretical framework was proposed alongside a set of techniques aimed at improving fault tolerance and recovery in 
+Microservice systems \cite{IJNRD2023}. Within this context, \textit{availability} is identified as the most 
+fundamental metric for evaluating system resilience. Based on the theoretical foundation presented in 
+the book \textit{Reliability and Availability of Cloud Computing} by Eric Bauer and Randee Adams \cite{bauer2012cloud}, availability is defined as:
+
+\begin{equation}
+\text{Availability} = \frac{MTBF}{MTBF + MTTR} \times 100\%
+\label{eq:availability}
+\end{equation}
+
+where:
+
+\begin{itemize}
+    \item \textbf{MTBF (Mean Time Between Failures)} represents the average time between system failures, reflecting system reliability. 
+    MTBF is calculated as the ratio of the total stable operating time to the total number of error occurrences
+\end{itemize}
+
+\begin{equation}
+MTBF = \frac{\sum_{i=1}^{n} \left( t^{\text{start}}_i - t^{\text{recovery}}_{i-1} \right)}{n}
+\label{eq:mtbf}
+\end{equation}
+
+\begin{itemize}
+    \item \textbf{MTTR (Mean Time To Recovery)} denotes the average time required to restore the system after a failure. 
+    MTTR is calculated as the ratio of the total fault recovery time to the total number of fault occurrences
+\end{itemize}
+
+\begin{equation}
+MTTR = \frac{\sum_{i=1}^{n} \left( t^{\text{recovery}}_i - t^{\text{failure}}_i \right)}{n}
+\label{eq:mttr}
+\end{equation}
+
+Nagaraj Parvatha highlighted that Microservice architecture can reduce MTTR by up to 66\% (from an average of 58 minutes to 19 minutes). This improvement is primarily achieved through \textit{service isolation}, which prevents cascading failures. When a specific service (e.g., \texttt{grading-service}) fails, it does not affect the entire system as in a monolithic architecture, thereby significantly reducing the time required for fault detection and recovery.
+
+To validate this theoretical claim, the system will simulate a failure scenario by intentionally interrupting the grading service container. The recovery time will be measured from the moment the service becomes unavailable until it is either automatically restored or successfully restarted (i.e., when the system reaches the \texttt{Health check: Pass} state).
 
 \subsection{Cost Efficiency}
 
-Cost Efficiency encompasses both infrastructure and operational expenditures, benchmarked against workload elasticity. In \cite{Fullscale2025}, Fullscale.io analysts executed detailed case studies revealing Microservices infrastructure costs increase 50-100\% (\$75-200K/year versus Monolithic's \$50-100K), yet deliver compelling ROI after 18 months through +40\% revenue-per-user gains despite \$1.2M migration investment. In parallel, \cite{Yogant_Faye} meta-analysis across 23 migration cases quantified +47\% post-migration cost increase but established long-term savings via horizontal scaling efficiency. Detailed breakdowns confirm DevOps tooling (+150-275\%), training (+233\%), and total uplift (+67\%) remain justified for LMS systems exhibiting high traffic variability characteristic of enrollment peaks and examination surges.
+This criterion evaluates the economic and operational viability of the architecture. According to the empirical 
+study by Yogant Faye (2025) \cite{Yogant_Faye}, which synthesized data from 23 architectural 
+migrations, "Cost" in modern systems is a multi-dimensional construct comprising Infrastructure
+Expenditure, Operational Overhead (DevOps), and the Complexity Tax associated with system maintenance.
 
-\subsection{Development Velocity}
+Faye’s findings indicate a stark contrast in cost profiles: while transitioning to Microservice 
+leads to an average infrastructure cost increase of 47\%, the operational "Complexity Tax" — specifically
+in DevOps tooling and observability — surges by 150\% to 275\%. To determine whether this 
+increased expenditure translates into better performance, we utilize the Resource Utilization Efficiency (RUE) metric:
 
-Development Velocity tracks feature delivery throughput using industry-standard DORA metrics: deployment frequency, lead time for changes, and change failure rate. CircleCI and Codacy analyses in recent DevOps literature prove Microservices enable ``daily per service'' deployments versus Monolithic ``weekly'' cadence, cutting lead time by 60\%. In \cite{Yogant_Faye}, the survey evidenced 47 deploys/month for Microservices (20× Monolithic's 2.3) despite initial -28\% velocity penalty during migration. Case studies confirm +60\% sustained velocity post-18 months, positioning Microservices as optimal for dynamic LMS evolution including AI grading, analytics integration, and multi-platform feature delivery.
-\section{Relevant Technologies}
-This section reviews the key technologies adopted across all three architectural implementations in this project. A deliberate decision was made to maintain a uniform technology stack — NestJS, Vue.js, and PostgreSQL — across all three architectures, ensuring that observed differences are attributable to architectural structure rather than technology choice.
+\begin{equation}
+RUE = \frac{\text{Number of processing requests}}{\text{Provisioned Resources (CPU/RAM usage)}}
+\label{eq:rue}
+\end{equation}
 
+where \textit{Workload} represents the number of processed 
+requests, and \textit{Provisioned Resources} refers to the 
+allocated computational resources (e.g., CPU and RAM).
+
+\subsubsection{The Baseline vs. Elasticity Trade-off}
+
+The research by Faye introduces the Architecture Selection Index (ASI), which suggests that the Cost Efficiency of Microservice only surpasses that of a Monolith when certain operational thresholds are met.
+
+\begin{itemize}
+\item \textbf{The Infrastructure Tax (Monolithic Advantage):} At low-to-moderate scales, the Monolithic architecture exhibits a superior RUE because it avoids the "Infrastructure Tax"—the baseline resource consumption required for inter-service communication (API Gateways, Service Mesh) and independent runtimes. Faye's meta-analysis confirms that for teams smaller than 25 developers, the Monolith remains the most cost-effective choice.
+
+\item \textbf{Scaling Granularity (Microservice Advantage):} The RUE of Microservice becomes dominant when the system faces high \textbf{Traffic Variability} (exceeding a 2:1 ratio). In an LMS context, if the independent scaling needs of a specific module (e.g., \texttt{grading-service}) exceed 40\% of the total service load, Microservice prevent "Resource Over-provisioning." Unlike a Monolith, which requires replicating the entire application stack to handle a spike in one module, Microservice allow for targeted resource allocation, thereby optimizing the RUE during peak periods.
+\end{itemize}
+
+\subsubsection{Operational Cost and Long-term ROI}
+
+Faye’s survey of 67 software architects reveals that while Microservice have a higher "Cost of Entry," they achieve a 
+higher Maintainability Score (4.2/5 vs. 2.4/5). From a Cost Efficiency perspective, this reduces 
+the "Mean Time To Repair" (MTTR) and minimizes the cost of technical debt.
+
+The study concludes that Microservice act as a "Scalability Insurance." The higher initial investment and the 47\% increase in infrastructure 
+costs are justified only when the system demands independent evolution of services. For an LMS, this means the RUE is 
+maximized not by minimizing the cloud bill, but by ensuring that resource consumption scales linearly with the pedagogical 
+demand of specific functional domains.
+
+\section{Relevant Core Technologies}
+This section details the technological ecosystem selected for the project. The primary criterion for technology selection is "Experimental Control"—ensuring that the frameworks used do not introduce bias toward one architecture over the other, but rather provide the necessary tools to implement both with high fidelity.
 \subsection{NestJS Framework}
-NestJS is a progressive Node.js framework for building server-side applications, built on top of TypeScript and inspired 
-by Angular's modular design principles. Its native support for modules, providers, controllers, and dependency 
-injection makes it particularly well-suited for implementing all three target architectures within a consistent programming model.
-
-For the Monolithic implementation, NestJS provides a single application context with shared services and a common database connection. For the Microservices implementation, NestJS's built-in microservices transport layer — supporting patterns such as TCP, Redis-based message queues, and gRPC — provides the inter-service communication infrastructure.
-
-The framework's module system is architecturally significant: a NestJS module encapsulates a cohesive set of providers 
-and can explicitly declare its public interface. When inter-module dependencies are forced to go through declared exports, 
-the framework structurally prevents the accidental cross-cutting dependencies that commonly undermine modular designs. 
+NestJS is a progressive Node.js framework providing a consistent programming model 
+for both monolithic and Microservice implementations. Its built-in support for modules, 
+dependency injection, and inter-service communication (TCP, message queues) enables fair 
+architectural comparison by isolating backend design differences from framework limitations. 
+Both implementations utilize NestJS to enforce modular boundaries and clear separation of concerns.
+Both implementations maintain an identical frontend (React/Vite SPA) to isolate 
+backend architectural impact. This ensures comparison focuses on server-side design 
+choices rather than frontend framework differences.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{images/Nestjs.png}
-    \caption{Nestjs in Microservice achitecture}
+    \includegraphics[width=0.7\textwidth]{images/concept/Nestjs.png}
+    \caption{Nestjs Framework Overview}
     \label{fig:nestjs}
 \end{figure}
 
-\subsection{Vue.js Frontend Framework}
-
-Vue.js is a progressive JavaScript framework for building user interfaces, adopted in this project for the frontend layer common to all three architectural variants. Maintaining a single frontend codebase across all three backends allows the study to isolate the impact of backend architectural choices without introducing frontend variability.
-
-In the Monolithic configurations, the Vue.js application communicates with a single backend API endpoint. In the Microservices 
-configuration, an API Gateway aggregates requests from the Vue.js frontend and routes them to 
-the appropriate downstream service. This pattern, referred to as the Backend-for-Frontend (BFF) 
-pattern, is a standard approach in production Microservices deployments.
-
-\subsection{PostgreSQL and Database Strategy}
-
-PostgreSQL is used as the primary relational database across all three architectural implementations. However, the database strategy differs meaningfully between architectures and constitutes one of the most substantive structural differences among the three variants.
-
-In the Monolithic architecture, all domain entities — Students, Lecturer, Reviewer, Admin, courses, enrollments, assignments, grades, and progress records — reside in a single shared database schema. This schema is accessed by all application modules, creating a high degree of database-level coupling.
-
-On the other hand, Microservices possesses its special principle: each service owns its own state. The state requirements are resolved through API calls rather than shared database access, providing the highest degree of data isolation but introducing challenges in consistency and cross-service querying.
-
-\subsection{Load Balancing and Reverse Proxies}
 
 
-Load balancing and reverse proxy mechanisms play a relevant but architecturally differentiated role across the three implementations evaluated in this project. A reverse proxy receives incoming client requests and forwards them to one or more backend servers, while also handling concerns such as TLS termination, request routing, and health-based traffic exclusion. In this project, Nginx serves as the reverse proxy across all three architectural variants, providing a consistent ingress layer.
+\subsection{PostgreSQL}
 
-For Monolithic, the reverse proxy configuration is straightforward and identical between the two: Nginx 
-routes all incoming traffic to a single application upstream, applying round-robin load balancing 
-across multiple instances when horizontal scaling is required.
+PostgreSQL serves as the relational database across both architectures, but database 
+organization differs meaningfully. In the Monolithic architecture, all entities (Students, Courses, Enrollments, Grades, 
+etc.) reside in a single shared schema, creating high database-level coupling. All 
+application modules access the same tables directly.
+
+In the Microservice architecture, each service maintains its own schema (database 
+per service pattern) within the same PostgreSQL instance. Cross-service data queries 
+are resolved through API calls rather than shared database access, providing stronger 
+data isolation but requiring additional coordination mechanisms (API composition, 
+event propagation via RabbitMQ) for consistency.
+
+This difference is a key evaluation point for Change Scenarios, where modifications 
+to grading logic (Scenario 1) and progress tracking (Scenario 2) reveal how each 
+architecture accommodates evolving data requirements.
+
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{images/Reverse-Proxy.png}
-    \caption{Reverse Proxy: Handling Internet Requests for Multiple Servers}
-    \label{fig:reverse-proxy}
+    \includegraphics[width=0.7\textwidth]{images/concept/postgre.png}
+    \caption{PostgreSQL Database Associated with NestJS}
+    % \label{fig:nestjs}
 \end{figure}
 
-In the Microservices architecture, the reverse proxy role expands into two layers. Nginx handles TLS termination and acts as the outermost ingress point, forwarding all requests to a NestJS API Gateway, which in turn applies service-specific routing rules to direct requests to the appropriate downstream service. This two-layer pattern abstracts the internal service decomposition from the Vue.js frontend and enables per-service independent scaling. However, it also introduces additional configuration complexity — a quantifiable dimension in the operational complexity criterion of this study's comparison framework.
-
+\subsection{Communication Paradigms: Synchronous vs. Asynchronous}
+The effectiveness of a Microservice-based LMS is largely determined by its inter-service communication strategy. Theoretical literature identifies two primary patterns:
+\begin{itemize}
+\item \textbf{Synchronous Request-Response:} REST or gRPC, where a service waits for a direct response. While easier to implement, this can lead to "Cascading Failures" if one service in the chain slows down.
+\item \textbf{Asynchronous Messaging:} Leveraging message brokers such as \textbf{RabbitMQ}. This pattern decouples services, allowing them to process tasks at their own pace. For an LMS, this is vital for non-blocking operations such as sending notification emails or generating background analytics reports.
+\end{itemize}
+This study integrates both patterns to evaluate how they contribute to the system's overall \textit{Fault Tolerance} and \textit{Resource Utilization Efficiency (RUE)}, moving beyond simple process separation to true operational decoupling.
 
 \subsection{Docker and Containerization}
 Docker is used to containerize all architectural implementations, ensuring consistent deployment environments and enabling fair performance comparisons. Each architecture is packaged as a Docker Compose configuration specifying the required services, database instances, and network topology.
 
 For the Monolithic architecture, a single application container is defined alongside a database container.
-For the Microservices architecture, individual containers are defined per service, along with a shared API Gateway 
+For the Microservice architecture, individual containers are defined per service, along with a shared API Gateway 
 container and service-specific database containers. This configuration difference itself constitutes a measurable
 dimension of operational complexity in the comparative evaluation.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{images/Docker.png}
-    \caption{Docker: Handling service containerization for microservice (for example)}
-    \label{fig:reverse-proxy}
-\end{figure}
-
-
-
-\section{Summary}
-
-2.5   Summary
-This chapter has reviewed the relevant literature on software architecture in LMS contexts, established the theoretical foundations of Monolithic, Modular Monolith, and Microservices architectural styles, and defined the comparison framework applied in the experimental phase of this project. The key insight from the literature is that architectural choices involve trade-offs along multiple dimensions — maintainability, operational complexity, scalability, and change impact — and that the optimal choice is context-dependent rather than universal.
-The technologies adopted in this project — NestJS, Vue.js, PostgreSQL, and Docker — provide a stable, uniform experimental platform that isolates architectural differences as the primary independent variable. The five-criterion comparison framework operationalizes theoretical concepts of coupling, cohesion, and scalability into measurable experimental dimensions.
-The subsequent chapters translate these theoretical foundations and the defined comparison framework into a concrete system design (Chapter 3), three architectural implementations (Chapter 4), and a systematic experimental evaluation (Chapter 5), yielding empirical evidence on the practical trade-offs of each architectural style in an LMS context.
-\lipsum[14]
-=======
-This chapter has reviewed existing real-time messaging solutions, relevant technologies, and theoretical principles that underpin the design of scalable messaging systems. The insights gained from this literature review will inform the design and implementation choices made in subsequent chapters.
-
-
+Furthermore, the use of containerization transcends simple packaging; it represents the shift towards \textbf{Cloud-Native} engineering. By defining the infrastructure via Docker Compose, the research ensures "Environmental Parity," eliminating the "it works on my machine" phenomenon. This allows for a rigorous "ceteris paribus" comparison, where the only variable is the architectural topology. The study also draws on the theory of \textbf{Micro-segmentation}, where each container’s resource limits (CPU and Memory) are strictly defined, allowing for an empirical analysis of how each architecture handles "Resource Contention" under the 2,000 VU stress test scenarios defined in later chapters

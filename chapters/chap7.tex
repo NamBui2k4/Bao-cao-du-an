@@ -1,101 +1,71 @@
 \chapter{Conclusion}
-\label{chap:conclusion}
 
 \section{Overview of the Study}
+\textit{This study provides a multi-dimensional comparative evaluation of Monolithic and Microservice architectures, 
+transitioning from theoretical debates to evidence-based insights within the specific operational rigors of a Learning Management System.} 
 
-This study builds on a broad foundation of research and best practices in real-time messaging, distributed systems, and cloud-native deployment \cite{fowler2015microservices,tilkov2018nodejs,kleppmann2013designing,li2020realtime}.
+This research conducted a rigorous and empirically grounded comparative analysis of two dominant 
+software architectural paradigms — Monolithic and Microservice — within the specific operational 
+context of a Learning Management System (LMS). Rather than relying on theoretical conjecture or 
+domain-agnostic benchmarks, the research was designed to capture the behavioral characteristics 
+of each architecture under workload conditions representative of real-world LMS deployments: concurrent 
+student enrollment, course browsing during peak semester loads, and write-intensive submission workflows. 
 
-\noindent\textbf{Restatement of the Research Problem}
-\par\vspace{0.5em}
-Real-time communication has become a critical requirement in modern digital platforms, from social networks to collaborative tools. The research problem is motivated by the increasing demand for scalable, low-latency messaging as discussed in \cite{cantelon2017nodejs,brown2019websockets,blogmicro2023}.
-This thesis addressed the challenge of designing and implementing a scalable, reliable, and efficient real-time messaging system using Node.js and WebSocket technology. The core research problem was to enable seamless, low-latency message delivery to a large number of concurrent users, while ensuring system robustness and maintainability.
+By constructing two functionally identical implementations of the same LMS business logic — one as a 
+single-process NestJS application and the other as a service containerized ecosystem coordinated via 
+Nginx and RabbitMQ — and subjecting both to an identical suite of stress tests using \texttt{k6}, the 
+study produced a multi-dimensional dataset spanning throughput, response time, CPU utilization, 
+resource efficiency (RUE), fault tolerance, and development-phase availability.
 
-\vspace{0.5em}
-\noindent\textbf{Summary of the System Objectives}
-\par\vspace{0.5em}
-The primary objectives of this study were to design a system architecture capable of supporting high concurrency and real-time message delivery, implement essential messaging features such as delivery/read receipts, presence, and typing indicators, and ensure scalability, high availability, and security through cloud-native deployment and best practices. Additionally, the system's performance and reliability were validated through comprehensive testing and benchmarking.
 
-\vspace{0.5em}
-\noindent\textbf{Summary of the Approach Taken}
-\par\vspace{0.5em}
-To achieve these objectives, the project adopted a microservices-inspired architecture, leveraging Node.js for backend services and WebSocket for persistent, bidirectional communication. The system was deployed on AWS using managed services to maximize scalability and operational efficiency. Rigorous testing and monitoring were integrated throughout the development lifecycle to ensure quality and resilience.
+\section{Key Findings and Insights}
+\textit{The synthesis of experimental data reveals a complex interplay between architectural topology and system performance, where the advantages of service decomposition are balanced against the overhead of distributed coordination.}
 
-\section{Summary of Findings and Achievements}
+The experimental results yield several interconnected findings that define the performance-cost-resilience trade-off landscape under LMS-specific conditions.
 
-The findings and achievements are evaluated in the context of established benchmarks and architectural patterns for real-time systems \cite{baker2017websocket,wang2018scalable,nguyen2021pubsub,rauch2022scalable}.
+\subsection{Throughput and Response Time: The Concurrency Crossover}
+\textit{The capacity of each architecture to handle concurrent traffic is not static but is governed by a critical crossover threshold that determines the efficiency of request processing.}
 
-\noindent\textbf{Functional Achievements}
-\par\vspace{0.5em}
-The system successfully delivers core real-time messaging features. It provides reliable WebSocket-based communication for instant message delivery, supports delivery and read receipts, presence tracking, and typing indicators, and robustly handles connection drops and reconnections.
 
-\vspace{0.5em}
-\noindent\textbf{Architectural and Technical Contributions}
-\par\vspace{0.5em}
-Key technical contributions of the project include a scalable Node.js micro-architecture that supports horizontal scaling, efficient pub/sub message fan-out using Redis to enable high-throughput broadcast, and a resilient WebSocket gateway with auto-reconnect logic and session management.
 
-\vspace{0.5em}
-\noindent\textbf{Deployment \& Performance Achievements}
-\par\vspace{0.5em}
-The system was deployed on AWS and evaluated under realistic load conditions. It demonstrated linear scalability in AWS ECS as the node count increased, achieved throughput and latency benchmarks that meet or exceed non-functional requirements, and implemented comprehensive observability with CloudWatch, X-Ray, and custom metrics.
+The throughput analysis identifies a context-dependent performance hierarchy governed by a crossover threshold at approximately \textbf{1,000 Virtual Users}. 
+\begin{itemize}
+    \item \textbf{Sub-threshold (Low Load):} The Monolithic architecture maintains a measurable advantage due to the absence of inter-service network hops. At single-user load, the Monolith's response time (12.8 ms) is over 2.6 times faster than the Microservice baseline (34.1 ms).
+    \item \textbf{Post-threshold (High Load):} The hierarchy inverts as the Monolith reaches event-loop saturation. At 2,000 VUs, Microservice achieves 579.17 RPS compared to the Monolith’s 430.94 RPS — a \textbf{34.4\% superiority}. Under instantaneous burst patterns (Scenario 2), this advantage expands to \textbf{63\%} at 1,500 VUs, demonstrating the parallel absorption capacity of distributed containers.
+\end{itemize}
 
-\section{Strengths of the Proposed System}
+However, the Microservice write-path exhibited a critical vulnerability: a P99 response time of 30,002 ms at moderate loads (200--500 VUs), indicating transaction failures due to inter-service coordination timeouts. This highlights a reliability risk for high-stakes enrollment tasks in distributed architectures.
 
-The strengths of the proposed system are supported by both academic and industry sources on scalable, secure, and reliable messaging \cite{guth2018comparison,roberts2020aws,awsdocs,redisdocs}.
+\subsection{CPU Utilization and Resource Efficiency: The Infrastructure Tax}
+\textit{The economic viability of an architecture is determined by its ability to convert computational power into successful user transactions, a ratio that fluctuates significantly between idle and peak states.}
 
-\noindent\textbf{Performance Strengths}
-\par\vspace{0.5em}
-The system achieves low-latency message delivery and high throughput, even under heavy load, thanks to efficient event-driven programming and optimized resource allocation.
+The analysis confirms the existence of an \textbf{"Infrastructure Tax"} in Microservice. Components like the RabbitMQ broker and Nginx gateway establish a static resource floor, with RabbitMQ consuming 40--60\% CPU even at idle. 
 
-\vspace{0.5em}
-\noindent\textbf{Scalability \& High Availability Strengths}
-\par\vspace{0.5em}
-Horizontal scaling via container orchestration and stateless service design enables the system to handle surges in user activity. Multi-AZ deployment and health checks ensure high availability.
+Despite this, the \textbf{Resource Utilization Efficiency (RUE)} analysis reveals:
+\begin{itemize}
+    \item \textbf{Normal Load (200 VUs):} Microservice is significantly more efficient, with an $RUE_{CPU}$ of 1,148.09 compared to the Monolith’s 573.22. It processed 4.65x more requests per unit of CPU.
+    \item \textbf{Peak Load (1,000 VUs):} The ranking reverses. The Monolith’s $RUE_{CPU}$ is 4.58x higher than Microservice, as the latter struggles with the exponential overhead of cross-service communication and container orchestration.
+\end{itemize}
 
-\vspace{0.5em}
-\noindent\textbf{Security Strengths}
-\par\vspace{0.5em}
-Security is enforced through encrypted communication, strict IAM policies, and isolation of sensitive resources. Secrets management and regular audits further strengthen the security posture.
+\subsection{Fault Tolerance and Development-Phase Resilience}
+\textit{Architectural resilience is evaluated not only by runtime stability but also by the system's ability to isolate failures and maintain availability throughout the continuous development lifecycle.}
 
-\vspace{0.5em}
-\noindent\textbf{System Stability \& Reliability}
-\par\vspace{0.5em}
-The architecture is resilient to node failures and network disruptions, with automated failover and robust reconnection logic ensuring continuous service.
+Empirical examination of 148 commit events reveals that Microservice achieved a system availability of \textbf{43.31\%} versus \textbf{35.14\%} for the Monolith during development. This is attributed to the "Bounded Blast Radius" property; whereas a configuration error in the Monolith's single \texttt{Dockerfile} paralyzed the entire system, errors in Microservice (e.g., Nginx pathing) resulted only in localized service outages, allowing the rest of the ecosystem to remain operational.
 
-\section{Limitations of the System}
+\section{Contextual Superiority}
+\textit{Selecting the appropriate architecture requires an objective alignment between the institution's operational requirements, expected user scale, and technical infrastructure maturity.}
 
-\noindent\textbf{Technical Limitations}
-\par\vspace{0.5em}
-Despite its strengths, the system faces several technical challenges. The Node.js single-threaded event loop may become a bottleneck under extreme concurrency. The Redis pub/sub mechanism has scalability ceilings for very large fan-out scenarios. Additionally, state synchronization across distributed nodes introduces complexity and potential consistency issues.
+A central finding of this research is that neither architecture is universally superior. The optimal choice depends on operational scale and organizational maturity:
 
-\vspace{0.5em}
-\noindent\textbf{Deployment Constraints}
-\par\vspace{0.5em}
-There are also deployment constraints. AWS deployment incurs significant cost overhead, especially at scale. Latency may increase for users in distant regions due to network propagation delays. Furthermore, auto-scaling WebSocket connections is limited by current cloud provider capabilities.
-
-\vspace{0.5em}
-\noindent\textbf{Feature Limitations}
-\par\vspace{0.5em}
-In terms of features, advanced messaging capabilities such as message reactions and threads are not yet implemented. There is also no dedicated mobile application or offline mode provided in the current version.
-
-\section{Recommendations and Future Work}
-
-Recommendations for future work are informed by recent trends and open challenges in distributed messaging and cloud-native systems \cite{martin2021websocket,blogkafka2022,smith2020cloud,kim2023iot}.
-
-\noindent\textbf{Architectural Improvements}
-\par\vspace{0.5em}
-Future enhancements could include integrating distributed messaging platforms such as Kafka or NATS for greater scalability and reliability, deploying in multi-region, active-active configurations to improve global availability, and exploring WebRTC for real-time media messaging capabilities.
-
-\vspace{0.5em}
-\noindent\textbf{Feature Enhancements}
-\par\vspace{0.5em}
-Feature enhancements may involve supporting rich media messaging (images, video, audio), improving message search and indexing for a better user experience, and adding conversation analytics and reporting features.
-
-\vspace{0.5em}
-\noindent\textbf{Operational Enhancements}
-\par\vspace{0.5em}
-Operational enhancements could include implementing predictive autoscaling based on traffic patterns, enhancing alerting and anomaly detection with machine learning, and applying advanced cost optimization strategies for cloud resources.
+\begin{itemize}
+    \item \textbf{Small to Medium Scale (<500 Concurrent Users):} The \textbf{Monolithic} architecture is the rational choice. It offers superior write-path reliability, lower maintenance complexity (lower MTTR), and higher resource efficiency during traffic spikes.
+    \item \textbf{Large Scale (>2,000 Concurrent Users):} \textbf{Microservice} are decisively superior. Their ability to maintain high throughput and isolate faults during peak academic events outweighs their higher baseline infrastructure cost.
+    \item \textbf{The Crossover Range (500--2,000 Users):} This "ambiguous zone" requires selection based on DevOps maturity. Organizations should consider the \textbf{Monolithic} as an intermediate strategy to retain operational simplicity while preparing for future decomposition.
+\end{itemize}
 
 \section{Final Remarks}
+\textit{This study concludes that architectural design is an ongoing process of managing trade-offs, where data-driven insights provide the necessary clarity to balance performance, cost, and resilience.}
 
-The development and deployment of a scalable real-time messaging system has provided valuable insights into the challenges and best practices of modern cloud-native application design. Real-time communication is increasingly vital in today's interconnected world, and building such systems requires careful attention to scalability, reliability, and user experience. Through this project, important lessons were learned in system architecture, cloud deployment, and operational excellence, laying a strong foundation for future innovation and improvement.
-\lipsum[45]
+This research contributes a rigorous empirical framework that challenges both the naive adoption of Microservice and the conservative retention of Monoliths. The findings demonstrate that while Microservice provide a "Stability Dividend" and better fault isolation, they impose a heavy "Coordination Tax" during peak loads. 
+
+Ultimately, architectural selection for an LMS should be a data-driven decision based on the specific "Performance Knee" and "Efficiency Crossover" points identified in this study. In system design, every decision is a calculated trade-off; this work provides the empirical instruments to make those trade-offs with precision and clarity.

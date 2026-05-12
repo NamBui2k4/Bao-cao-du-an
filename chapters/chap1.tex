@@ -2,143 +2,139 @@
 
 \section{Background and Rationale}
 
-In recent years,  the rapid growth of technology and the push for digital 
-transformation in education have made the development of robust 
-Learning Management Systems (LMS) more urgent than ever. The architecture 
-behind such systems is not merely a technical choice; it directly shapes 
-their scalability, maintainability, and long-term. Approaches such as 
-Monolithic and Microservices have emerged as dominant 
-paradigms, each offering unique strengths and trade-offs. This project will 
-explore and contrast these three architectural models in the context of 
-building an LMS, focusing on functional modules such as user authentication, 
-course management, content delivery, assessment, and progress tracking.
+The global education landscape has undergone a profound paradigm shift, accelerated by the increasing demand for remote learning and digital literacy. Learning Management Systems (LMS) have transitioned from being supplementary tools to becoming the core infrastructure of modern academic institutions. As user bases grow from hundreds to millions of concurrent learners, the underlying software architecture of these platforms faces unprecedented pressure. The architectural integrity of an LMS is no longer just a technical detail; it is a strategic foundation that determines the system's ability to remain available under seasonal traffic spikes, such as during national examinations or enrollment periods.
+
+Traditionally, software development favored the \textit{Monolithic} approach due to its simplicity in initial deployment and cohesive data management. However, as systems evolve in complexity, the rigid coupling inherent in Monoliths often leads to "architectural erosion," where minor changes in one module can trigger unpredictable failures across the entire system. In response, the \textit{Microservice} architecture has emerged as a disruptive alternative, promising independent scalability and fault isolation by decomposing the system into smaller, loosely coupled services. 
+
+Despite the widespread adoption of Microservice by industry giants, it introduces a "complexity tax," involving distributed networking overhead and data consistency challenges. This research is motivated by the need to provide a rigorous, empirical comparison between these dominant paradigms within the specific functional requirements of an LMS—covering identity management, course delivery, and high-stakes assessment. By quantifying the trade-offs in performance, resilience, and resource efficiency, this study aims to provide a decision-making blueprint for educational technology architects.
 
 \section{Project Objectives}
 
-In general , the objectives of this project is building and 
-deploying a Learning Management System (LMS) in form of three 
-different software architectures.
+The overarching goal of this research is to architect, implement, and rigorously evaluate a Learning Management System (LMS) across contrasting architectural paradigms. The study aims to move beyond theoretical comparisons by providing an empirical data-driven analysis of how Monolithic and Microservice models behave under identical operational pressures, ultimately determining their suitability for various organizational scales and technical requirements.
 
-For specific, the following targets will be expected:
+To achieve this, the project is structured around five core research objectives:
+
 \begin{enumerate}
-    \item Design an LMS system with core functions (CRUD, 
-    authentication / authorization, enrollment, 
-    learning content, assignment \& grade, learning process,..)
+\item \textbf{High-Fidelity System Design and Domain Specification:}
+The first objective focuses on designing a comprehensive LMS framework that serves as a stable "functional baseline." This involves:
+\begin{itemize}
+\item Developing a detailed Software Requirements Specification (SRS) for core academic workflows, including Identity and Access Management (IAM), Course Lifecycle Management, Content Delivery, and complex Assessment engines.
+\item Utilizing Domain-Driven Design (DDD) to identify "Bounded Contexts," ensuring that the business logic is modular enough to be implemented as either internal packages (Monolith) or independent services (Microservice) without altering the core functionality.
+\end{itemize}
 
-    \item Deploy the LMS system according to three different architectures
-    \item Develop scenarios for system change and expansion
-    \item Compare architectures based on specific technical criteria
-    \item Analyze the advantages and disadvantages of each 
-    architecture in actual implementation
+\item \textbf{Dual-Architectural Implementation and Environment Parity:}
+The project aims to develop two distinct, production-ready versions of the LMS. The focus is to maintain a \textit{ceteris paribus} (all other things being equal) condition:
+\begin{itemize}
+    \item Implementing the Monolithic version as a single-process application using NestJS, ensuring centralized data management and low-latency internal communication.
+    \item Implementing the Microservice version using a "Database-per-Service" pattern, coordinated via an API Gateway and asynchronous message brokering (RabbitMQ).
+    \item Utilizing Docker and Docker Compose to ensure both architectures operate within identical infrastructure constraints, eliminating environment-induced performance variances.
+\end{itemize}
 
+\item \textbf{Empirical Performance Benchmarking and Stress Testing:}
+To quantify the "Performance Tax" of each architecture, the study will conduct systematic load tests:
+\begin{itemize}
+    \item Measuring raw Throughput (Requests Per Second) and Tail Latency (P95/P99) under diverse load profiles, including "Step Loads" for scalability and "Flash Crowds" for peak stress resilience.
+    \item Calculating the Resource Utilization Efficiency (RUE) to determine the marginal CPU and RAM consumption per active learner, providing a clear picture of the infrastructure costs associated with each model.
+\end{itemize}
+
+\item \textbf{Simulation of Software Evolution and Maintainability:}
+This objective evaluates how each architecture responds to the inevitable changes in a software lifecycle. The study will model "Controlled Change Scenarios" to:
+\begin{itemize}
+    \item Measure the development effort and "Ripple Effect" (regression risks) when modifying core business logic, such as grading algorithms.
+    \item Analyze the complexity of "Schema Evolution" and feature extensions (e.g., adding a learning analytics module) to observe the trade-offs between shared and isolated data stores.
+\end{itemize}
+
+\item \textbf{Comparative Synthesis and Decision-Support Framework:}
+The final objective is to synthesize all quantitative and qualitative data into a coherent evaluation matrix. This involves:
+\begin{itemize}
+    \item Analyzing the balance between "System Complexity" and "Performance Gains" to identify the "Break-even Point" where the overhead of Microservice becomes a justified investment.
+    \item Providing a strategic recommendation model for educational institutions, helping them choose an architecture based on their specific constraints in terms of team size, traffic variability, and long-term maintainability.
+\end{itemize}
 \end{enumerate}
 
 \section{Scope of the Project}
 
-The scope of the project focuses on researching, designing and comparing three 
-software architectures when applied to the same business problem. The LMS system 
-is only used as a research object to illustrate and verify the above architectures, 
-not the main development goal of the project. In other words, the focus of the 
-topic is software architecture analysis, while LMS construction only serves as 
-a means for deployment and evaluation.
+The primary focus of this project is a comparative analysis of software architectural paradigms; the LMS platform serves as a standardized experimental vehicle rather than a commercial end-product. To ensure the scientific validity of the comparison, the scope is strictly defined within the following boundaries:
 
-Across all three architectures, the system remains core functional modules stable
-(e.g., authentication and authorization, enrollment, learning 
-content, assignments and grading, progress tracking) even existing changes
-in architecture. Extended features such as learning analytics or recommendation 
-algorithms are acknowledged but reserved for future work.
+\begin{itemize}
+\item \textbf{Functional Stability and Code Parity:}
+Across all architectural implementations, the core business logic—encompassing Identity Management, Enrollment Workflows, Course Content Delivery, and Assessment Engines—remains functionally identical. A "Code Parity" policy is enforced: any algorithmic optimization made in the Monolithic version is mirrored in the Microservice version. This ensures that observed performance variances are strictly a result of architectural topology (e.g., network hops, serialization) rather than disparities in code efficiency.
 
-The project does not prioritize detailed user interface or user experience (UI/UX) 
-design, employing only minimal interfaces sufficient for testing and demonstration. 
-Regarding technology choices, the team adopts contemporary frameworks considered 
-most suitable at present, namely NestJS and Vue.js due to their widespread adoption, 
-strong community support, and suitability for modular.
+\item \textbf{Data Architecture and Persistence Scope:} 
+The study covers two distinct data management strategies. For the Monolithic model, the scope includes a centralized relational schema within a single PostgreSQL instance. For the Microservice model, the scope shifts to a "Database-per-Service" pattern, utilizing isolated schemas to evaluate the impact of data decentralization on system consistency and complexity. The research limits its focus to relational data; NoSQL or Graph databases are excluded to maintain a controlled comparison environment.
 
-Other architectures (e.g., serverless, large-scale event-driven architecture, 
-or complex hybrid architectures) are outside the scope of the study.
+\item \textbf{Technological and Infrastructure Constraints:} 
+The research utilizes a unified, industry-standard technology stack to eliminate "language-induced" bias.
+\begin{itemize}
+    \item \textbf{Backend:} NestJS (Node.js) is chosen for its modular architecture, allowing for a seamless transition between monolithic modules and Microservice.
+    \item \textbf{Communication:} The scope includes synchronous RESTful APIs for the Monolith and a hybrid of REST and asynchronous Message Brokering (via RabbitMQ) for Microservice.
+    \item \textbf{Deployment:} Both systems are containerized using \textit{Docker} and orchestrated via \textit{Docker Compose}. The evaluation is conducted within a controlled virtual network to ensure "Environmental Parity," where CPU and RAM limits are strictly enforced at the container level.
+\end{itemize}
 
+\item \textbf{Evaluation Metrics and Analytical Boundaries:} 
+The project limits its quantitative analysis to specific Key Performance Indicators (KPIs): Throughput (Requests Per Second), Tail Latency (P95/P99), and Resource Utilization Efficiency (RUE). Qualitative analysis is bounded by "Controlled Change Scenarios" designed to simulate real-world maintenance tasks. 
+
+\item \textbf{Exclusions and Out-of-Scope Elements:}
+To maintain a focused research trajectory, the following elements are explicitly excluded:
+\begin{itemize}
+    \item \textbf{Front-end Complexity:} The User Interface (UI) is developed as a "Minimum Viable Product" (MVP) using Vue.js, prioritizing functionality for data verification over aesthetic design or advanced User Experience (UX) features.
+    \item \textbf{Advanced Architectures:} Alternative models such as Serverless, fully decentralized Event-Driven Architectures (EDA), or Service Meshes (e.g., Istio) are reserved for future work and are outside the current comparative framework.
+    \item \textbf{Security Auditing:} While standard JWT-based authentication is implemented, deep penetration testing and exhaustive security audits are not within the scope of this architectural study.
+\end{itemize}
+\end{itemize}
 
 \section{Research Methodology}
 
-With a comparative research orientation, this project focuses on an empirical 
-architectural study rather than a pure software development process.
+This study adopts a comparative and empirical research design, emphasizing a quantitative and qualitative architectural analysis. The methodology is structured to isolate architectural variables, ensuring that performance and operational differences observed between the \textit{Monolithic} and \textit{Microservice} implementations are attributable solely to their structural paradigms.
 
-\subsection{Theorical Methodology}
-The first phase includes refering and reviewing design principle theories
-to clarify the basic characteristics of the elearning system and building
-techniques. Those theories are collected from reputable academic papers and
-professional blogs \cite{nguyen_van_dinh_2023,Alex_xu_2025}. This phases also
-need to figure out the advantages and limitations of the three architectures.
-During refering, our team proposes some search keywords including: 
-“monolithic and microservices”, "elearning systems design",
-"Low \& High coupling".
+\subsection{Theoretical Framework and Comparison Basis}
 
-The theories analysis process is carried out using a thematic synthesis 
-approach, focusing on extracting core principles such as coupling, cohesion, 
-deployment unit, inter-component communication, and scalability. From there, 
-the study identifies five main comparison criteria: 
+The foundational phase involves a systematic review of architectural design patterns. By synthesizing contemporary theories~\cite{IJNRD2023}, a standardized evaluation framework is established, focusing on three analytical pillars:
+
 \begin{itemize}
-    \item Degree of module separation, 
-    \item Scope of impact when modifying functionality, 
-    \item Scalability of individual functional components, 
-    \item Complexity of deployment and operation, 
-    \item Suitability for different system scales: small, medium, large.
+    \item \textbf{Performance and Scalability Efficiency:} Evaluating throughput and response-time degradation curves under elastic workloads.
+    
+    \item \textbf{Fault Tolerance and Resilience Topology:} Investigating the "Blast Radius" of localized failures and the system's ability to maintain partial availability.
+    
+    \item \textbf{Resource Optimization:} Measuring the marginal resource consumption (CPU/RAM) required per unit of throughput in a cloud-native context.
 \end{itemize}
 
-The result of the theoretical phase is a comparison framework 
-that serves as the foundation for the experimental part, ensuring 
-that the assessment is not subjective but based on recognized 
-principles and evidence.
+\subsection{Experimental Design and Implementation}
 
-\subsection{Practical Methodology}
+The core research involves implementing the LMS twice, following different architectural blueprints but maintaining strict business logic parity.
 
-The experimental phase is the focus of the research. At the begining,
-team will outline some ideas and functional requirement into 
-Software Requirement Specs (SRS) in order to be convenient for designing.
-In SRS, the system is decomposed into consistent business subsystems 
-including: Identity \& Access Management, User Profile, Course Management, 
-Enrollment Management, Learning Content, Assessment \& Grading, Progress 
-Tracking, along with future expansion subsystems (Learning Analytics and AI). 
-Maintaining the same business decomposition across all three architectures 
-ensures fairness and objectivity: differences only come from the choice of 
-architectural structure, not from functional variation.
+\subsubsection{Functional Domain Decomposition}
+Using a Software Requirements Specification (SRS), the LMS is decomposed into \textit{Bounded Contexts}. This ensures that domains like \textit{Assessment} and \textit{Course Management} are consistent across versions, eliminating software-level bias and maintaining a \textit{ceteris paribus} condition.
 
-The LMS system is implemented three times, each corresponding to one of 
-the selected architectural styles. All of them, we use the 
-same technology stack (NestJS, Vuejs, PostgreSQL) to control extraneous 
-variables, and are containerized with Docker to measure deployments fairly.
+\subsubsection{Environment Control}
+Both architectures are orchestrated via \textit{Docker Compose}. This approach guarantees environment parity, ensuring that networking latency and runtime overhead are consistent across all test cycles.
 
-A scenario-based evaluation approach is applied to all implementations 
-using predefined change scenarios, including:
+\subsection{Quantitative Evaluation Metrics}
+
+The study employs scenario-based stress testing to extract granular data:
+
+\begin{enumerate}
+    \item \textbf{Performance (Throughput \& Latency):} Measuring Requests Per Second (RPS) and P95/P99 "Tail Latency" to identify system bottlenecks.
+    
+    \item \textbf{Resource Utilization Efficiency (RUE):} Calculating the Resource Utilization Index to measure the CPU/RAM processing capacity consumed relative to workload intensity.
+    
+    \item \textbf{Fault Tolerance Assessment:} Measuring \textit{Mean Time To Recovery} (MTTR) and the \textit{Service Availability Index} after injecting failures into non-critical modules.
+    
+    \item \textbf{Total Cost of Ownership (TCO):} Analyzing infrastructure footprint and operational complexity involved in deployment and service orchestration.
+\end{enumerate}
+
+\subsection{Maintainability and Evolution Scenarios}
+
+Three "Change Scenarios" are introduced to simulate long-term maintenance:
 \begin{itemize}
-    \item Modifying the learning scoring logic
-    \item Adding a learning progress statistics feature
-    \item Preparing for future integration of learning analytics functionality
-\end{itemize}
-
-The evaluation is performed using scenario-based evaluation, a common 
-approach in software architecture research to simulate real-life changes. 
-Three change scenarios are applied to all three versions in turn:
-\begin{itemize}
-    \item Modifying the learning scoring logic.
-    \item Adding a learning progress statistics feature (adding a learning progress statistics feature).
-    \item Preparing for future integration of learning analytics functionality.
+    \item \textbf{Logic Modification:} Assessing regression risks during algorithm updates.
+    \item \textbf{Feature Extension:} Measuring the effort to integrate learning analytics.
+    \item \textbf{Schema Evolution:} Evaluating the impact of data structure changes on interconnected modules (Shared DB vs. Isolated DB).
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{images/three-achitech.png}
-    \caption{Monolith vs Microservices: What's the Right Choice  \cite{Alex_xu_2025}}
-    \label{fig:nodejs-architecture}
+    \includegraphics[width=0.85\textwidth]{images/concept/micoservice_mono.png}
+    \caption{Experimental Comparison Framework: Monolithic vs. Microservice}
+    \label{fig:comparison-framework}
 \end{figure}
-
-\section{Structure of the Report}
-This report is structured as follows:
-\begin{itemize}
-    \item \textbf{Chapter 1}: Introduction - Provides background, objectives, scope, methodology, and references.
-    \item \textbf{Chapter 2}: Literature Review - Reviews existing technologies and related work.
-    \item \textbf{Chapter 3}: System Design and Implementation - Details the design and implementation of the messaging system.
-    \item \textbf{Chapter 4}: Testing and Evaluation - Presents the testing procedures and evaluation results.
-    \item \textbf{Chapter 5}: Conclusion and Future Work - Summarizes findings and suggests future directions.
-    \item \textbf{Appendices}: Contains supplementary material and code listings.
-\end{itemize}
